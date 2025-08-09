@@ -1,0 +1,40 @@
+{
+  "name": "nolex/smart-tax",
+  "description": "A robust, scalable, and secure digital platform for managing municipal tax collection processes. The system supports multi-role access for revenue officers, tax collectors, IT admins, and municipal executives. It enables both online and offline tax collection, invoice generation, real-time reporting, and secure communication via email and SMS.",
+  "license": "MIT",
+  "type": "project",
+  "scripts": {
+    "start": "php -S localhost:8080 -t public",
+    "test": "phpunit"
+  },
+  "autoload": {
+    "psr-4": {
+      "App\\": "src/"
+    }
+  },
+  "require": {
+    "vlucas/phpdotenv": "^5.6",
+    "phpmailer/phpmailer": "^6.10",
+    "firebase/php-jwt": "^6.11",
+    "monolog/monolog": "^3.5",
+    "php-di/php-di": "^7.0",
+    "slim/psr7": "^1.6",
+    "slim/slim": "^4.12",
+    "ramsey/uuid": "^4.8",
+    "respect/validation": "^2.4"
+  },
+  "require-dev": {
+    "monolog/monolog": "^3.9"
+  },
+  "authors": [
+    {
+      "name": "Gilbert Elikplim Kukah",
+      "email": "kwamegilbert1114@gmail.com"
+    }
+  ],
+  "config": {
+    "sort-packages": true,
+    "process-timeout": 0
+  },
+  "minimum-stability": "stable"
+}
