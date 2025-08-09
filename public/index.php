@@ -5,7 +5,6 @@ define('MODEL', BASE . 'src/model/');
 define('CONTROLLER', BASE . 'src/controller/');
 define('CONFIG', BASE . 'src/config/');
 
-
 require_once BASE . 'vendor/autoload.php';
 use DI\Container;
 use Slim\Factory\AppFactory;

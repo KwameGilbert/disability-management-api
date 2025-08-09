@@ -1,115 +1,139 @@
+-- Create database
+CREATE DATABASE pwd_management;
+USE pwd_management;
 
--- 1. Roles & User
+-- Table: roles
+CREATE TABLE roles (
+    role_id INT PRIMARY KEY AUTO_INCREMENT,
+    role_name VARCHAR(50) UNIQUE NOT NULL
+);
 
-CREATE TABLE `users` (
-`id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-`full_name` VARCHAR(100) NOT NULL,
-`email` VARCHAR(100) NOT NULL UNIQUE,
-`phone` VARCHAR(20) NOT NULL,
-`password_hash` VARCHAR(255) NOT NULL,
-`role` ENUM('client','finance','collector','it','rcd','mce') NOT NULL DEFAULT 'client',
-`created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-`updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- Table: users
+CREATE TABLE users (
+    user_id INT PRIMARY KEY AUTO_INCREMENT,
+    role_id INT NOT NULL,
+    username VARCHAR(100) UNIQUE NOT NULL,
+    email VARCHAR(150) UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    profile_image VARCHAR(255),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (role_id) REFERENCES roles(role_id)
+);
 
--- 2. Businesses (Clients)
+-- Table: password_resets
+CREATE TABLE password_resets (
+    reset_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    otp VARCHAR(10) NOT NULL,
+    expires_at DATETIME NOT NULL,
+    used BOOLEAN DEFAULT 0,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
 
-CREATE TABLE `businesses` (
-`id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-`name` VARCHAR(150) NOT NULL,
-`registration_id` VARCHAR(50) NOT NULL UNIQUE,
-`owner_user_id` INT UNSIGNED NOT NULL,
-`address` VARCHAR(255),
-`phone` VARCHAR(20),
-`created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-`updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-PRIMARY KEY (`id`),
-INDEX (`owner_user_id`),
-CONSTRAINT `fk_business_owner` FOREIGN KEY (`owner_user_id`)
-REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- Table: communities
+CREATE TABLE communities (
+    community_id INT PRIMARY KEY AUTO_INCREMENT,
+    community_name VARCHAR(150) UNIQUE NOT NULL
+);
 
--- 3. Tax Types (Configured by Finance)
+-- Table: pwd_records
+CREATE TABLE pwd_records (
+    pwd_id INT PRIMARY KEY AUTO_INCREMENT,
+    officer_id INT NOT NULL,
+    quarter ENUM('Q1','Q2','Q3','Q4') NOT NULL,
+    gender ENUM('male','female','other') NOT NULL,
+    full_name VARCHAR(150) NOT NULL,
+    occupation VARCHAR(100) NOT NULL,
+    contact VARCHAR(20) NOT NULL,
+    dob DATE NOT NULL,
+    age INT NOT NULL,
+    disability_category VARCHAR(100) NOT NULL,
+    disability_type VARCHAR(100) NOT NULL,
+    gh_card_number VARCHAR(50) NOT NULL,
+    nhis_number VARCHAR(50),
+    community_id INT NOT NULL,
+    status ENUM('pending','approved','disapproved') DEFAULT 'pending',
+    profile_image VARCHAR(255) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (officer_id) REFERENCES users(user_id),
+    FOREIGN KEY (community_id) REFERENCES communities(community_id)
+);
 
-CREATE TABLE `tax_types` (
-`id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-`name` VARCHAR(100) NOT NULL,
-`description` VARCHAR(255) NOT NULL,
-`amount` DECIMAL(10,2) NOT NULL COMMENT 'Base amount per frequency unit',
-`frequency` ENUM('daily','weekly','monthly','quarterly','annually') NOT NULL,
-`created_by` INT UNSIGNED NOT NULL COMMENT 'Finance user who created this tax',
-`created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-`updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-PRIMARY KEY (`id`),
-INDEX (`created_by`),
-CONSTRAINT `fk_tax_created_by` FOREIGN KEY (`created_by`)
-REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- Table: pwd_guardians
+CREATE TABLE pwd_guardians (
+    guardian_id INT PRIMARY KEY AUTO_INCREMENT,
+    pwd_id INT NOT NULL,
+    name VARCHAR(150),
+    occupation VARCHAR(100),
+    phone VARCHAR(20),
+    relationship VARCHAR(50),
+    FOREIGN KEY (pwd_id) REFERENCES pwd_records(pwd_id)
+);
 
--- 4. Business–Tax Assignments & Rules
+-- Table: pwd_education
+CREATE TABLE pwd_education (
+    education_id INT PRIMARY KEY AUTO_INCREMENT,
+    pwd_id INT NOT NULL,
+    education_level VARCHAR(100),
+    school_name VARCHAR(150),
+    FOREIGN KEY (pwd_id) REFERENCES pwd_records(pwd_id)
+);
 
-CREATE TABLE `business_taxes` (
-`id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-`business_id` INT UNSIGNED NOT NULL,
-`tax_type_id` INT UNSIGNED NOT NULL,
-`active` TINYINT(1) NOT NULL DEFAULT 1,
-`start_date` DATE NOT NULL,
-`end_date` DATE NULL,
-PRIMARY KEY (`id`),
-INDEX (`business_id`),
-INDEX (`tax_type_id`),
-CONSTRAINT `fk_bt_business` FOREIGN KEY (`business_id`)
-REFERENCES `businesses` (`id`) ON DELETE CASCADE,
-CONSTRAINT `fk_bt_taxtype` FOREIGN KEY (`tax_type_id`)
-REFERENCES `tax_types` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- Table: pwd_support_needs
+CREATE TABLE pwd_support_needs (
+    need_id INT PRIMARY KEY AUTO_INCREMENT,
+    pwd_id INT NOT NULL,
+    assistance_needed TEXT,
+    FOREIGN KEY (pwd_id) REFERENCES pwd_records(pwd_id)
+);
 
--- 5. Payments (Collected by Collectors)
+-- Table: supporting_documents
+CREATE TABLE supporting_documents (
+    document_id INT PRIMARY KEY AUTO_INCREMENT,
+    related_type ENUM('pwd','assistance') NOT NULL,
+    related_id INT NOT NULL,
+    file_name VARCHAR(255) NOT NULL,
+    uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 
-CREATE TABLE `payments` (
-`id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-`business_tax_id` INT UNSIGNED NOT NULL COMMENT 'Links to business_taxes',
-`collector_id` INT UNSIGNED NOT NULL COMMENT 'User.id of collector',
-`periods_paid` INT UNSIGNED NOT NULL DEFAULT 1 COMMENT 'Number of frequency units',
-`amount_paid` DECIMAL(12,2) NOT NULL,
-`payment_method` ENUM('momo','card','ussd') NOT NULL,
-`paystack_ref` VARCHAR(100) NULL,
-`paid_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-PRIMARY KEY (`id`),
-INDEX (`business_tax_id`),
-INDEX (`collector_id`),
-CONSTRAINT `fk_pay_bt` FOREIGN KEY (`business_tax_id`)
-REFERENCES `business_taxes` (`id`) ON DELETE CASCADE,
-CONSTRAINT `fk_pay_collector` FOREIGN KEY (`collector_id`)
-REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- Table: assistance
+CREATE TABLE assistance (
+    assistance_id INT PRIMARY KEY AUTO_INCREMENT,
+    admin_id INT NOT NULL,
+    assistance_type VARCHAR(100) NOT NULL,
+    date_of_support DATE NOT NULL,
+    beneficiary_id INT NOT NULL,
+    pre_assessment BOOLEAN DEFAULT 0,
+    status ENUM('pending','approved','disapproved') DEFAULT 'pending',
+    assessment_notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (admin_id) REFERENCES users(user_id),
+    FOREIGN KEY (beneficiary_id) REFERENCES pwd_records(pwd_id)
+);
 
--- 6. Notifications (Email/SMS Logs)
+-- Table: activity_logs
+CREATE TABLE activity_logs (
+    log_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    activity TEXT NOT NULL,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
 
-CREATE TABLE `notifications` (
-`id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-`user_id` INT UNSIGNED NOT NULL,
-`type` ENUM('sms','email') NOT NULL,
-`content` TEXT NOT NULL,
-`sent_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-`read_at` DATETIME NULL,
-PRIMARY KEY (`id`),
-INDEX (`user_id`),
-CONSTRAINT `fk_note_user` FOREIGN KEY (`user_id`)
-REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- Table: quarterly_statistics
+CREATE TABLE quarterly_statistics (
+    stat_id INT PRIMARY KEY AUTO_INCREMENT,
+    quarter ENUM('Q1','Q2','Q3','Q4') NOT NULL,
+    year YEAR NOT NULL,
+    total_registered_pwd INT NOT NULL,
+    total_assessed INT NOT NULL,
+    pending INT NOT NULL
+);
 
--- 7. Audit Logs (Immutable Action Tracking)
-
-CREATE TABLE `audit_logs` (
-`id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-`user_id` INT UNSIGNED NOT NULL,
-`action` VARCHAR(100) NOT NULL,
-`details` TEXT,
-`logged_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-PRIMARY KEY (`id`),
-INDEX (`user_id`),
-CONSTRAINT `fk_audit_user` FOREIGN KEY (`user_id`)
-REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- Table: assistance_distribution
+CREATE TABLE assistance_distribution (
+    dist_id INT PRIMARY KEY AUTO_INCREMENT,
+    assistance_type VARCHAR(100) NOT NULL,
+    count INT NOT NULL
+);
