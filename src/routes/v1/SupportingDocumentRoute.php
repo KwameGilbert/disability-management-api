@@ -49,7 +49,7 @@ return function ($app): void {
         $response->getBody()->write($result);
         return $response->withHeader('Content-Type', 'application/json');
     });
-    
+
     // Get document download info
     $app->get('/v1/documents/{id}/download-info', function ($request, $response, $args) use ($documentController) {
         $id = isset($args['id']) ? (int) $args['id'] : 0;

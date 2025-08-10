@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 require_once CONFIG . 'Database.php';
@@ -7,8 +8,7 @@ require_once CONFIG . 'Database.php';
  * Users Model aligned to database/schema.sql
  *
  * Tables used:
- * - users(user_id, role_id, username, email, password_hash, profile_image, created_at, updated_at)
- * - roles(role_id, role_name)
+ * - users(user_id, role, username, email, password_hash, profile_image, created_at, updated_at)
  * - password_resets(reset_id, user_id, otp, expires_at, used)
  */
 class Users
@@ -58,15 +58,14 @@ class Users
     }
 
     /**
-     * List all users with their role names
+     * List all users
      */
     public function getAll(): array
     {
         try {
-            $sql = "SELECT u.user_id, u.role_id, r.role_name, u.username, u.email, u.profile_image, u.created_at, u.updated_at
-                    FROM {$this->tableName} u
-                    LEFT JOIN roles r ON r.role_id = u.role_id
-                    ORDER BY u.user_id DESC";
+            $sql = "SELECT user_id, role, username, email, profile_image, created_at, updated_at
+                    FROM {$this->tableName}
+                    ORDER BY user_id DESC";
             $stmt = $this->db->prepare($sql);
             if (!$this->executeQuery($stmt)) {
                 return [];
@@ -82,10 +81,9 @@ class Users
     public function getById(int $userId): ?array
     {
         try {
-            $sql = "SELECT u.user_id, u.role_id, r.role_name, u.username, u.email, u.profile_image, u.created_at, u.updated_at
-                    FROM {$this->tableName} u
-                    LEFT JOIN roles r ON r.role_id = u.role_id
-                    WHERE u.user_id = :user_id";
+            $sql = "SELECT user_id, role, username, email, profile_image, created_at, updated_at
+                    FROM {$this->tableName}
+                    WHERE user_id = :user_id";
             $stmt = $this->db->prepare($sql);
             if (!$this->executeQuery($stmt, ['user_id' => $userId])) {
                 return null;
@@ -102,10 +100,9 @@ class Users
     public function getByEmail(string $email): ?array
     {
         try {
-            $sql = "SELECT u.user_id, u.role_id, r.role_name, u.username, u.email, u.profile_image, u.created_at, u.updated_at
-                    FROM {$this->tableName} u
-                    LEFT JOIN roles r ON r.role_id = u.role_id
-                    WHERE u.email = :email";
+            $sql = "SELECT user_id, role, username, email, profile_image, created_at, updated_at
+                    FROM {$this->tableName}
+                    WHERE email = :email";
             $stmt = $this->db->prepare($sql);
             if (!$this->executeQuery($stmt, ['email' => $email])) {
                 return null;
@@ -122,10 +119,9 @@ class Users
     public function getByUsername(string $username): ?array
     {
         try {
-            $sql = "SELECT u.user_id, u.role_id, r.role_name, u.username, u.email, u.profile_image, u.created_at, u.updated_at
-                    FROM {$this->tableName} u
-                    LEFT JOIN roles r ON r.role_id = u.role_id
-                    WHERE u.username = :username";
+            $sql = "SELECT user_id, role, username, email, profile_image, created_at, updated_at
+                    FROM {$this->tableName}
+                    WHERE username = :username";
             $stmt = $this->db->prepare($sql);
             if (!$this->executeQuery($stmt, ['username' => $username])) {
                 return null;
@@ -141,19 +137,25 @@ class Users
 
     /**
      * Create a new user
-     * @param array{role_id:int,username:string,email:string,password:string,profile_image?:string} $data
+     * @param array{role:string,username:string,email:string,password:string,profile_image?:string} $data
      * @return int|false Inserted user_id or false on failure
      */
     public function create(array $data): int|false
     {
         try {
             // Validate required fields
-            $required = ['role_id', 'username', 'email', 'password'];
+            $required = ['role', 'username', 'email', 'password'];
             foreach ($required as $field) {
                 if (!isset($data[$field]) || $data[$field] === '') {
                     $this->lastError = "Missing required field: {$field}";
                     return false;
                 }
+            }
+
+            // Validate role is either 'admin' or 'officer'
+            if (!in_array($data['role'], ['admin', 'officer'])) {
+                $this->lastError = "Role must be either 'admin' or 'officer'";
+                return false;
             }
 
             // Enforce uniqueness of username and email
@@ -162,12 +164,12 @@ class Users
                 return false;
             }
 
-            $sql = "INSERT INTO {$this->tableName} (role_id, username, email, password_hash, profile_image)
-                    VALUES (:role_id, :username, :email, :password_hash, :profile_image)";
+            $sql = "INSERT INTO {$this->tableName} (role, username, email, password_hash, profile_image)
+                    VALUES (:role, :username, :email, :password_hash, :profile_image)";
             $stmt = $this->db->prepare($sql);
 
             $params = [
-                'role_id'       => (int) $data['role_id'],
+                'role'          => $data['role'],
                 'username'      => $data['username'],
                 'email'         => $data['email'],
                 'password_hash' => password_hash($data['password'], PASSWORD_DEFAULT),
@@ -197,14 +199,20 @@ class Users
                 return false;
             }
 
-            $allowedFields = ['role_id', 'username', 'email', 'profile_image'];
+            $allowedFields = ['role', 'username', 'email', 'profile_image'];
             $sets = [];
             $params = ['user_id' => $userId];
 
             foreach ($data as $key => $value) {
                 if (in_array($key, $allowedFields, true)) {
+                    // Validate role if it's being updated
+                    if ($key === 'role' && !in_array($value, ['admin', 'officer'])) {
+                        $this->lastError = "Role must be either 'admin' or 'officer'";
+                        return false;
+                    }
+
                     $sets[] = "$key = :$key";
-                    $params[$key] = $key === 'role_id' ? (int) $value : $value;
+                    $params[$key] = $value;
                 }
             }
 
@@ -250,7 +258,7 @@ class Users
                 return null;
             }
 
-            $stmt = $this->db->prepare("SELECT u.*, r.role_name FROM {$this->tableName} u LEFT JOIN roles r ON r.role_id = u.role_id WHERE u.username = :ue OR u.email = :ue LIMIT 1");
+            $stmt = $this->db->prepare("SELECT * FROM {$this->tableName} WHERE username = :ue OR email = :ue LIMIT 1");
             if (!$this->executeQuery($stmt, ['ue' => $usernameOrEmail])) {
                 $this->lastError = 'Database error during login';
                 return null;
@@ -376,10 +384,9 @@ class Users
     public function findByOtpCode(string $otp): ?array
     {
         try {
-            $sql = 'SELECT u.user_id, u.role_id, r.role_name, u.username, u.email, u.profile_image
+            $sql = 'SELECT u.user_id, u.role, u.username, u.email, u.profile_image
                     FROM password_resets pr
                     INNER JOIN users u ON u.user_id = pr.user_id
-                    LEFT JOIN roles r ON r.role_id = u.role_id
                     WHERE pr.otp = :otp AND pr.expires_at > NOW() AND pr.used = 0
                     ORDER BY pr.reset_id DESC LIMIT 1';
             $stmt = $this->db->prepare($sql);
@@ -418,5 +425,3 @@ class Users
         return str_pad((string) random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
     }
 }
-
-

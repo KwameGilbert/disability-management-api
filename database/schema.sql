@@ -2,23 +2,16 @@
 CREATE DATABASE pwd_management;
 USE pwd_management;
 
--- Table: roles
-CREATE TABLE roles (
-    role_id INT PRIMARY KEY AUTO_INCREMENT,
-    role_name VARCHAR(50) UNIQUE NOT NULL
-);
-
 -- Table: users
 CREATE TABLE users (
     user_id INT PRIMARY KEY AUTO_INCREMENT,
-    role_id INT NOT NULL,
+    role ENUM('admin','officer') NOT NULL,
     username VARCHAR(100) UNIQUE NOT NULL,
     email VARCHAR(150) UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     profile_image VARCHAR(255),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (role_id) REFERENCES roles(role_id)
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- Table: password_resets
@@ -37,79 +30,84 @@ CREATE TABLE communities (
     community_name VARCHAR(150) UNIQUE NOT NULL
 );
 
--- Table: pwd_records
+-- Table: disability_categories
+CREATE TABLE disability_categories (
+    category_id INT PRIMARY KEY AUTO_INCREMENT,
+    category_name VARCHAR(100) UNIQUE NOT NULL
+);
+
+-- Table: disability_types
+CREATE TABLE disability_types (
+    type_id INT PRIMARY KEY AUTO_INCREMENT,
+    category_id INT NOT NULL,
+    type_name VARCHAR(100) UNIQUE NOT NULL,
+    FOREIGN KEY (category_id) REFERENCES disability_categories(category_id)
+);
+
+-- Table: assistance_types
+CREATE TABLE assistance_types (
+    assistance_type_id INT PRIMARY KEY AUTO_INCREMENT,
+    assistance_type_name VARCHAR(100) UNIQUE NOT NULL
+);
+
+-- Table: pwd_records (all PWD info in one table)
 CREATE TABLE pwd_records (
     pwd_id INT PRIMARY KEY AUTO_INCREMENT,
-    officer_id INT NOT NULL,
+    user_id INT NOT NULL, 
     quarter ENUM('Q1','Q2','Q3','Q4') NOT NULL,
-    gender ENUM('male','female','other') NOT NULL,
+    year YEAR,
+    gender_id INT NOT NULL, -- references gender table
     full_name VARCHAR(150) NOT NULL,
-    occupation VARCHAR(100) NOT NULL,
-    contact VARCHAR(20) NOT NULL,
-    dob DATE NOT NULL,
-    age INT NOT NULL,
-    disability_category VARCHAR(100) NOT NULL,
-    disability_type VARCHAR(100) NOT NULL,
-    gh_card_number VARCHAR(50) NOT NULL,
+    occupation VARCHAR(100),
+    contact VARCHAR(20),
+    dob DATE,
+    age INT,
+    disability_category_id INT NOT NULL,
+    disability_type_id INT NOT NULL,
+    gh_card_number VARCHAR(50),
     nhis_number VARCHAR(50),
     community_id INT NOT NULL,
-    status ENUM('pending','approved','disapproved') DEFAULT 'pending',
-    profile_image VARCHAR(255) NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (officer_id) REFERENCES users(user_id),
-    FOREIGN KEY (community_id) REFERENCES communities(community_id)
-);
-
--- Table: pwd_guardians
-CREATE TABLE pwd_guardians (
-    guardian_id INT PRIMARY KEY AUTO_INCREMENT,
-    pwd_id INT NOT NULL,
-    name VARCHAR(150),
-    occupation VARCHAR(100),
-    phone VARCHAR(20),
-    relationship VARCHAR(50),
-    FOREIGN KEY (pwd_id) REFERENCES pwd_records(pwd_id)
-);
-
--- Table: pwd_education
-CREATE TABLE pwd_education (
-    education_id INT PRIMARY KEY AUTO_INCREMENT,
-    pwd_id INT NOT NULL,
+    guardian_name VARCHAR(150),
+    guardian_occupation VARCHAR(100),
+    guardian_phone VARCHAR(20),
+    guardian_relationship VARCHAR(50),
     education_level VARCHAR(100),
     school_name VARCHAR(150),
-    FOREIGN KEY (pwd_id) REFERENCES pwd_records(pwd_id)
-);
-
--- Table: pwd_support_needs
-CREATE TABLE pwd_support_needs (
-    need_id INT PRIMARY KEY AUTO_INCREMENT,
-    pwd_id INT NOT NULL,
-    assistance_needed TEXT,
-    FOREIGN KEY (pwd_id) REFERENCES pwd_records(pwd_id)
-);
-
--- Table: supporting_documents
-CREATE TABLE supporting_documents (
-    document_id INT PRIMARY KEY AUTO_INCREMENT,
-    related_type ENUM('pwd','assistance') NOT NULL,
-    related_id INT NOT NULL,
-    file_name VARCHAR(255) NOT NULL,
-    uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
--- Table: assistance
-CREATE TABLE assistance (
-    assistance_id INT PRIMARY KEY AUTO_INCREMENT,
-    admin_id INT NOT NULL,
-    assistance_type VARCHAR(100) NOT NULL,
-    date_of_support DATE NOT NULL,
-    beneficiary_id INT NOT NULL,
-    pre_assessment BOOLEAN DEFAULT 0,
-    status ENUM('pending','approved','disapproved') DEFAULT 'pending',
-    assessment_notes TEXT,
+    assistance_type_needed_id INT,
+    support_needs TEXT,
+    supporting_documents JSON, -- stores multiple file names
+    status ENUM('pending','approved','declined') DEFAULT 'pending',
+    profile_image VARCHAR(255),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (admin_id) REFERENCES users(user_id),
-    FOREIGN KEY (beneficiary_id) REFERENCES pwd_records(pwd_id)
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
+    FOREIGN KEY (gender_id) REFERENCES genders(gender_id),
+    FOREIGN KEY (disability_category_id) REFERENCES disability_categories(category_id),
+    FOREIGN KEY (disability_type_id) REFERENCES disability_types(type_id),
+    FOREIGN KEY (community_id) REFERENCES communities(community_id),
+    FOREIGN KEY (assistance_type_needed_id) REFERENCES assistance_types(assistance_type_id)
+);
+
+-- Table: genders
+CREATE TABLE genders (
+    gender_id INT PRIMARY KEY AUTO_INCREMENT,
+    gender_name VARCHAR(20) UNIQUE NOT NULL
+);
+
+-- Table: assistance_requests (tracking assistance process)
+CREATE TABLE assistance_requests (
+    request_id INT PRIMARY KEY AUTO_INCREMENT,
+    assistance_type_id INT NOT NULL,
+    beneficiary_id INT NOT NULL, -- PWD receiving assistance
+    requested_by INT NOT NULL, -- officer/admin logging request
+    description TEXT,
+    amount_value_cost DECIMAL(10,2),
+    admin_review_notes TEXT,
+    status ENUM('pending','review','ready_to_access','assessed','declined') DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (assistance_type_id) REFERENCES assistance_types(assistance_type_id),
+    FOREIGN KEY (beneficiary_id) REFERENCES pwd_records(pwd_id),
+    FOREIGN KEY (requested_by) REFERENCES users(user_id)
 );
 
 -- Table: activity_logs
@@ -129,11 +127,4 @@ CREATE TABLE quarterly_statistics (
     total_registered_pwd INT NOT NULL,
     total_assessed INT NOT NULL,
     pending INT NOT NULL
-);
-
--- Table: assistance_distribution
-CREATE TABLE assistance_distribution (
-    dist_id INT PRIMARY KEY AUTO_INCREMENT,
-    assistance_type VARCHAR(100) NOT NULL,
-    count INT NOT NULL
 );
