@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+require_once MODEL . 'PWDSupportNeeds.php';
+require_once MODEL . 'PWDRecords.php';
+require_once MODEL . 'ActivityLog.php';
+
 /**
  * PWDSupportNeedsController
  * 
@@ -9,218 +13,185 @@ declare(strict_types=1);
  */
 class PWDSupportNeedsController
 {
-    private PWDSupportNeeds $supportNeedsModel;
-    private PWDRecords $pwdModel;
-    private ActivityLog $logModel;
+    protected PWDSupportNeeds $supportNeedsModel;
+    protected PWDRecords $pwdModel;
+    protected ActivityLog $logModel;
 
-    public function __construct(
-        PWDSupportNeeds $supportNeedsModel,
-        PWDRecords $pwdModel,
-        ActivityLog $logModel
-    ) {
-        $this->supportNeedsModel = $supportNeedsModel;
-        $this->pwdModel = $pwdModel;
-        $this->logModel = $logModel;
+    public function __construct()
+    {
+        $this->supportNeedsModel = new PWDSupportNeeds();
+        $this->pwdModel = new PWDRecords();
+        $this->logModel = new ActivityLog();
     }
 
     /**
      * Get support needs for a specific PWD
      */
-    public function getByPWD($request, $response, $args)
+    public function getByPWD(int $pwdId): string
     {
-        $pwdId = (int)$args['pwd_id'];
-
         // Check if PWD exists
         $pwd = $this->pwdModel->getByPWDId($pwdId);
         if (!$pwd) {
-            $response->getBody()->write(json_encode([
-                'error' => 'PWD record not found'
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(404);
+            return json_encode([
+                'status' => 'error',
+                'message' => 'PWD record not found'
+            ], JSON_PRETTY_PRINT);
         }
 
         $supportNeeds = $this->supportNeedsModel->getByPWDId($pwdId);
 
-        $response->getBody()->write(json_encode([
-            'pwd' => $pwd,
-            'support_needs' => $supportNeeds
-        ]));
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withStatus(200);
+        return json_encode([
+            'status' => 'success',
+            'message' => null,
+            'data' => [
+                'pwd' => $pwd,
+                'support_needs' => $supportNeeds
+            ]
+        ], JSON_PRETTY_PRINT);
     }
 
     /**
      * Get a specific support need
      */
-    public function show($request, $response, $args)
+    public function show(int $needId): string
     {
-        $needId = (int)$args['id'];
         $need = $this->supportNeedsModel->getById($needId);
 
         if (!$need) {
-            $response->getBody()->write(json_encode([
-                'error' => 'Support need not found'
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(404);
+            return json_encode([
+                'status' => 'error',
+                'message' => 'Support need not found'
+            ], JSON_PRETTY_PRINT);
         }
 
-        $response->getBody()->write(json_encode($need));
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withStatus(200);
+        return json_encode([
+            'status' => 'success',
+            'message' => null,
+            'data' => $need
+        ], JSON_PRETTY_PRINT);
     }
 
     /**
      * Create a new support need
      */
-    public function create($request, $response)
+    public function create(array $data, ?int $userId = null): string
     {
-        $data = $request->getParsedBody();
-        $userId = $request->getAttribute('user_id');
-
         if (!isset($data['pwd_id'])) {
-            $response->getBody()->write(json_encode([
-                'error' => 'PWD ID is required'
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(400);
+            return json_encode([
+                'status' => 'error',
+                'message' => 'PWD ID is required'
+            ], JSON_PRETTY_PRINT);
         }
 
         // Check if PWD exists
         $pwd = $this->pwdModel->getByPWDId($data['pwd_id']);
         if (!$pwd) {
-            $response->getBody()->write(json_encode([
-                'error' => 'PWD record not found'
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(404);
+            return json_encode([
+                'status' => 'error',
+                'message' => 'PWD record not found'
+            ], JSON_PRETTY_PRINT);
         }
 
         $needId = $this->supportNeedsModel->create($data);
 
         if (!$needId) {
-            $response->getBody()->write(json_encode([
-                'error' => 'Failed to create support need: ' . $this->supportNeedsModel->getLastError()
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(400);
+            return json_encode([
+                'status' => 'error',
+                'message' => 'Failed to create support need: ' . $this->supportNeedsModel->getLastError()
+            ], JSON_PRETTY_PRINT);
         }
 
-        $this->logModel->log($userId, "Added support need for PWD #{$data['pwd_id']}");
+        if ($userId) {
+            $this->logModel->log($userId, "Added support need for PWD #{$data['pwd_id']}");
+        }
 
         $need = $this->supportNeedsModel->getById($needId);
 
-        $response->getBody()->write(json_encode([
+        return json_encode([
+            'status' => 'success',
             'message' => 'Support need created successfully',
-            'support_need' => $need
-        ]));
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withStatus(201);
+            'data' => $need
+        ], JSON_PRETTY_PRINT);
     }
 
     /**
      * Update an existing support need
      */
-    public function update($request, $response, $args)
+    public function update(int $needId, array $data, ?int $userId = null): string
     {
-        $needId = (int)$args['id'];
-        $data = $request->getParsedBody();
-        $userId = $request->getAttribute('user_id');
-
         // Check if support need exists
         $existingNeed = $this->supportNeedsModel->getById($needId);
         if (!$existingNeed) {
-            $response->getBody()->write(json_encode([
-                'error' => 'Support need not found'
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(404);
+            return json_encode([
+                'status' => 'error',
+                'message' => 'Support need not found'
+            ], JSON_PRETTY_PRINT);
         }
 
         // If PWD ID is being changed, check if the new PWD exists
         if (isset($data['pwd_id']) && $data['pwd_id'] != $existingNeed['pwd_id']) {
             $pwd = $this->pwdModel->getByPWDId($data['pwd_id']);
             if (!$pwd) {
-                $response->getBody()->write(json_encode([
-                    'error' => 'PWD record not found'
-                ]));
-                return $response
-                    ->withHeader('Content-Type', 'application/json')
-                    ->withStatus(404);
+                return json_encode([
+                    'status' => 'error',
+                    'message' => 'PWD record not found'
+                ], JSON_PRETTY_PRINT);
             }
         }
 
         $success = $this->supportNeedsModel->update($needId, $data);
 
         if (!$success) {
-            $response->getBody()->write(json_encode([
-                'error' => 'Failed to update support need: ' . $this->supportNeedsModel->getLastError()
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(400);
+            return json_encode([
+                'status' => 'error',
+                'message' => 'Failed to update support need: ' . $this->supportNeedsModel->getLastError()
+            ], JSON_PRETTY_PRINT);
         }
 
-        $this->logModel->log($userId, "Updated support need #{$needId}");
+        if ($userId) {
+            $this->logModel->log($userId, "Updated support need #{$needId}");
+        }
 
         $need = $this->supportNeedsModel->getById($needId);
 
-        $response->getBody()->write(json_encode([
+        return json_encode([
+            'status' => 'success',
             'message' => 'Support need updated successfully',
-            'support_need' => $need
-        ]));
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withStatus(200);
+            'data' => $need
+        ], JSON_PRETTY_PRINT);
     }
 
     /**
      * Delete a support need
      */
-    public function delete($request, $response, $args)
+    public function delete(int $needId, ?int $userId = null): string
     {
-        $needId = (int)$args['id'];
-        $userId = $request->getAttribute('user_id');
-
         // Check if support need exists
         $existingNeed = $this->supportNeedsModel->getById($needId);
         if (!$existingNeed) {
-            $response->getBody()->write(json_encode([
-                'error' => 'Support need not found'
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(404);
+            return json_encode([
+                'status' => 'error',
+                'message' => 'Support need not found'
+            ], JSON_PRETTY_PRINT);
         }
 
         $success = $this->supportNeedsModel->delete($needId);
 
         if (!$success) {
-            $response->getBody()->write(json_encode([
-                'error' => 'Failed to delete support need: ' . $this->supportNeedsModel->getLastError()
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(400);
+            return json_encode([
+                'status' => 'error',
+                'message' => 'Failed to delete support need: ' . $this->supportNeedsModel->getLastError()
+            ], JSON_PRETTY_PRINT);
         }
 
-        $this->logModel->log($userId, "Deleted support need #{$needId}");
+        if ($userId) {
+            $this->logModel->log($userId, "Deleted support need #{$needId}");
+        }
 
-        $response->getBody()->write(json_encode([
+        return json_encode([
+            'status' => 'success',
             'message' => 'Support need deleted successfully'
-        ]));
-        return $response
-            ->withHeader('Content-Type', 'application/json')
+        ], JSON_PRETTY_PRINT);
             ->withStatus(200);
     }
 

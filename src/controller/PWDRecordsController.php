@@ -34,7 +34,7 @@ class PWDRecordsController
         $this->supportNeedsModel = new PWDSupportNeeds();
         $this->documentModel = new SupportingDocument();
         $this->logModel = new ActivityLog();
-        
+
         $database = new Database();
         $this->db = $database->getConnection();
     }
@@ -42,87 +42,77 @@ class PWDRecordsController
     /**
      * Get all PWD records (with pagination)
      */
-    public function index($request, $response)
+    public function index(?int $limit = null, ?int $offset = null): string
     {
-        $queryParams = $request->getQueryParams();
-        $limit = isset($queryParams['limit']) ? (int)$queryParams['limit'] : null;
-        $offset = isset($queryParams['offset']) ? (int)$queryParams['offset'] : null;
-
         $pwds = $this->pwdModel->getAll($limit, $offset);
         $totalCount = $this->pwdModel->getCount();
 
         $result = [
+            'status' => !empty($pwds) ? 'success' : 'error',
             'pwds' => $pwds,
             'total' => $totalCount,
             'limit' => $limit,
-            'offset' => $offset
+            'offset' => $offset,
+            'message' => empty($pwds) ? 'No PWD records found' : null
         ];
 
-        $response->getBody()->write(json_encode($result));
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withStatus(200);
+        return json_encode($result, JSON_PRETTY_PRINT);
     }
 
     /**
      * Get PWD records by status
      */
-    public function getByStatus($request, $response, $args)
+    public function getByStatus(string $status): string
     {
-        $status = $args['status'];
         $pwds = $this->pwdModel->getByStatus($status);
 
-        $response->getBody()->write(json_encode(['pwds' => $pwds]));
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withStatus(200);
+        return json_encode([
+            'status' => !empty($pwds) ? 'success' : 'error',
+            'pwds' => $pwds,
+            'message' => empty($pwds) ? "No PWD records found with status: {$status}" : null
+        ], JSON_PRETTY_PRINT);
     }
 
     /**
      * Get PWD records by community
      */
-    public function getByCommunity($request, $response, $args)
+    public function getByCommunity(int $communityId): string
     {
-        $communityId = (int)$args['community_id'];
         $pwds = $this->pwdModel->getByCommunityId($communityId);
 
-        $response->getBody()->write(json_encode(['pwds' => $pwds]));
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withStatus(200);
+        return json_encode([
+            'status' => !empty($pwds) ? 'success' : 'error',
+            'pwds' => $pwds,
+            'message' => empty($pwds) ? "No PWD records found for community ID: {$communityId}" : null
+        ], JSON_PRETTY_PRINT);
     }
 
     /**
      * Search PWD records
      */
-    public function search($request, $response)
+    public function search(string $term): string
     {
-        $queryParams = $request->getQueryParams();
-        $term = $queryParams['term'] ?? '';
-
         $pwds = $this->pwdModel->search($term);
 
-        $response->getBody()->write(json_encode(['pwds' => $pwds]));
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withStatus(200);
+        return json_encode([
+            'status' => !empty($pwds) ? 'success' : 'error',
+            'pwds' => $pwds,
+            'message' => empty($pwds) ? "No PWD records found matching: {$term}" : null
+        ], JSON_PRETTY_PRINT);
     }
 
     /**
      * Get PWD record by ID with related data
      */
-    public function show($request, $response, $args)
+    public function show(int $pwdId): string
     {
-        $pwdId = (int)$args['id'];
         $pwd = $this->pwdModel->getByPWDId($pwdId);
 
         if (!$pwd) {
-            $response->getBody()->write(json_encode([
-                'error' => 'PWD record not found'
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(404);
+            return json_encode([
+                'status' => 'error',
+                'message' => "PWD record not found with ID: {$pwdId}"
+            ], JSON_PRETTY_PRINT);
         }
 
         // Get related data
@@ -131,20 +121,18 @@ class PWDRecordsController
         $pwd['support_needs'] = $this->supportNeedsModel->getByPWDId($pwdId);
         $pwd['documents'] = $this->documentModel->getByRelatedEntity('pwd', $pwdId);
 
-        $response->getBody()->write(json_encode($pwd));
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withStatus(200);
+        return json_encode([
+            'status' => 'success',
+            'pwd' => $pwd,
+            'message' => null
+        ], JSON_PRETTY_PRINT);
     }
 
     /**
      * Create a new PWD record with related data
      */
-    public function create($request, $response)
+    public function create(array $data, int $userId = null): string
     {
-        $data = $request->getParsedBody();
-        $userId = $request->getAttribute('user_id'); // Assumes middleware sets this
-
         // Start a transaction
         $this->db->beginTransaction();
 
@@ -192,8 +180,10 @@ class PWDRecordsController
                 }
             }
 
-            // Log the activity
-            $this->logModel->log($userId, "Created PWD record for {$data['full_name']} with ID {$pwdId}");
+            // Log the activity if user ID provided
+            if ($userId) {
+                $this->logModel->log($userId, "Created PWD record for {$data['full_name']} with ID {$pwdId}");
+            }
 
             // Commit the transaction
             $this->db->commit();
@@ -203,44 +193,34 @@ class PWDRecordsController
             $pwd['education'] = $this->educationModel->getByPWDId($pwdId);
             $pwd['support_needs'] = $this->supportNeedsModel->getByPWDId($pwdId);
 
-            $response->getBody()->write(json_encode([
-                'message' => 'PWD record created successfully',
-                'pwd' => $pwd
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(201);
+            return json_encode([
+                'status' => 'success',
+                'pwd' => $pwd,
+                'message' => 'PWD record created successfully'
+            ], JSON_PRETTY_PRINT);
         } catch (Exception $e) {
             // Roll back the transaction on error
             $this->db->rollBack();
 
-            $response->getBody()->write(json_encode([
-                'error' => $e->getMessage()
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(400);
+            return json_encode([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ], JSON_PRETTY_PRINT);
         }
     }
 
     /**
      * Update a PWD record with related data
      */
-    public function update($request, $response, $args)
+    public function update(int $pwdId, array $data, int $userId = null): string
     {
-        $pwdId = (int)$args['id'];
-        $data = $request->getParsedBody();
-        $userId = $request->getAttribute('user_id'); // Assumes middleware sets this
-
         // Check if PWD record exists
         $existingPWD = $this->pwdModel->getByPWDId($pwdId);
         if (!$existingPWD) {
-            $response->getBody()->write(json_encode([
-                'error' => 'PWD record not found'
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(404);
+            return json_encode([
+                'status' => 'error',
+                'message' => "PWD record not found with ID: {$pwdId}"
+            ], JSON_PRETTY_PRINT);
         }
 
         // Start a transaction
@@ -326,8 +306,10 @@ class PWDRecordsController
                 }
             }
 
-            // Log the activity
-            $this->logModel->log($userId, "Updated PWD record for {$existingPWD['full_name']} with ID {$pwdId}");
+            // Log the activity if user ID provided
+            if ($userId) {
+                $this->logModel->log($userId, "Updated PWD record for {$existingPWD['full_name']} with ID {$pwdId}");
+            }
 
             // Commit the transaction
             $this->db->commit();
@@ -337,135 +319,117 @@ class PWDRecordsController
             $pwd['education'] = $this->educationModel->getByPWDId($pwdId);
             $pwd['support_needs'] = $this->supportNeedsModel->getByPWDId($pwdId);
 
-            $response->getBody()->write(json_encode([
-                'message' => 'PWD record updated successfully',
-                'pwd' => $pwd
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(200);
+            return json_encode([
+                'status' => 'success',
+                'pwd' => $pwd,
+                'message' => 'PWD record updated successfully'
+            ], JSON_PRETTY_PRINT);
         } catch (Exception $e) {
             // Roll back the transaction on error
             $this->db->rollBack();
 
-            $response->getBody()->write(json_encode([
-                'error' => $e->getMessage()
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(400);
+            return json_encode([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ], JSON_PRETTY_PRINT);
         }
     }
 
     /**
      * Update PWD status
      */
-    public function updateStatus($request, $response, $args)
+    public function updateStatus(int $pwdId, string $status, int $userId = null): string
     {
-        $pwdId = (int)$args['id'];
-        $data = $request->getParsedBody();
-        $userId = $request->getAttribute('user_id');
-
-        if (!isset($data['status'])) {
-            $response->getBody()->write(json_encode([
-                'error' => 'Status field is required'
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(400);
+        if (empty($status)) {
+            return json_encode([
+                'status' => 'error',
+                'message' => 'Status field is required'
+            ], JSON_PRETTY_PRINT);
         }
 
         $existingPWD = $this->pwdModel->getByPWDId($pwdId);
         if (!$existingPWD) {
-            $response->getBody()->write(json_encode([
-                'error' => 'PWD record not found'
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(404);
+            return json_encode([
+                'status' => 'error',
+                'message' => "PWD record not found with ID: {$pwdId}"
+            ], JSON_PRETTY_PRINT);
         }
 
-        $success = $this->pwdModel->updateStatus($pwdId, $data['status']);
+        $success = $this->pwdModel->updateStatus($pwdId, $status);
 
         if (!$success) {
-            $response->getBody()->write(json_encode([
-                'error' => 'Failed to update status: ' . $this->pwdModel->getLastError()
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(400);
+            return json_encode([
+                'status' => 'error',
+                'message' => 'Failed to update status: ' . $this->pwdModel->getLastError()
+            ], JSON_PRETTY_PRINT);
         }
 
-        $this->logModel->log($userId, "Updated PWD status for {$existingPWD['full_name']} to {$data['status']}");
+        // Log the activity if user ID provided
+        if ($userId) {
+            $this->logModel->log($userId, "Updated PWD status for {$existingPWD['full_name']} to {$status}");
+        }
 
         $pwd = $this->pwdModel->getByPWDId($pwdId);
 
-        $response->getBody()->write(json_encode([
-            'message' => 'PWD status updated successfully',
-            'pwd' => $pwd
-        ]));
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withStatus(200);
+        return json_encode([
+            'status' => 'success',
+            'pwd' => $pwd,
+            'message' => 'PWD status updated successfully'
+        ], JSON_PRETTY_PRINT);
     }
 
     /**
      * Delete a PWD record and all related data
      */
-    public function delete($request, $response, $args)
+    public function delete(int $pwdId, int $userId = null): string
     {
-        $pwdId = (int)$args['id'];
-        $userId = $request->getAttribute('user_id');
-
         $existingPWD = $this->pwdModel->getByPWDId($pwdId);
         if (!$existingPWD) {
-            $response->getBody()->write(json_encode([
-                'error' => 'PWD record not found'
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(404);
+            return json_encode([
+                'status' => 'error',
+                'message' => "PWD record not found with ID: {$pwdId}"
+            ], JSON_PRETTY_PRINT);
         }
 
         // Delete PWD record (this will cascade delete related records)
         $success = $this->pwdModel->delete($pwdId);
 
         if (!$success) {
-            $response->getBody()->write(json_encode([
-                'error' => 'Failed to delete PWD record: ' . $this->pwdModel->getLastError()
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(400);
+            return json_encode([
+                'status' => 'error',
+                'message' => 'Failed to delete PWD record: ' . $this->pwdModel->getLastError()
+            ], JSON_PRETTY_PRINT);
         }
 
-        $this->logModel->log($userId, "Deleted PWD record for {$existingPWD['full_name']} with ID {$pwdId}");
+        // Log the activity if user ID provided
+        if ($userId) {
+            $this->logModel->log($userId, "Deleted PWD record for {$existingPWD['full_name']} with ID {$pwdId}");
+        }
 
-        $response->getBody()->write(json_encode([
+        return json_encode([
+            'status' => 'success',
             'message' => 'PWD record deleted successfully'
-        ]));
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withStatus(200);
+        ], JSON_PRETTY_PRINT);
     }
 
     /**
      * Get statistics by quarter and year
      */
-    public function getStatistics($request, $response, $args)
+    public function getStatistics(string $quarter, int $year): string
     {
-        $quarter = $args['quarter'] ?? null;
-        $year = isset($args['year']) ? (int)$args['year'] : null;
-
         if (!$quarter || !$year) {
-            $response->getBody()->write(json_encode([
-                'error' => 'Quarter and year parameters are required'
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(400);
+            return json_encode([
+                'status' => 'error',
+                'message' => 'Quarter and year parameters are required'
+            ], JSON_PRETTY_PRINT);
         }
 
         $stats = $this->pwdModel->getStatsByQuarterYear($quarter, $year);
 
-        $response->
+        return json_encode([
+            'status' => !empty($stats) ? 'success' : 'error',
+            'stats' => $stats,
+            'message' => empty($stats) ? "No statistics found for {$quarter} {$year}" : null
+        ], JSON_PRETTY_PRINT);
+    }
+}

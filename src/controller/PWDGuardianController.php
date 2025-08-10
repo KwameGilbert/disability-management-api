@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+require_once MODEL . 'PWDGuardian.php';
+require_once MODEL . 'PWDRecords.php';
+require_once MODEL . 'ActivityLog.php';
+
 /**
  * PWDGuardianController
  * 
@@ -9,238 +13,200 @@ declare(strict_types=1);
  */
 class PWDGuardianController
 {
-    private PWDGuardian $guardianModel;
-    private PWDRecords $pwdModel;
-    private ActivityLog $logModel;
+    protected PWDGuardian $guardianModel;
+    protected PWDRecords $pwdModel;
+    protected ActivityLog $logModel;
 
-    public function __construct(
-        PWDGuardian $guardianModel,
-        PWDRecords $pwdModel,
-        ActivityLog $logModel
-    ) {
-        $this->guardianModel = $guardianModel;
-        $this->pwdModel = $pwdModel;
-        $this->logModel = $logModel;
+    public function __construct()
+    {
+        $this->guardianModel = new PWDGuardian();
+        $this->pwdModel = new PWDRecords();
+        $this->logModel = new ActivityLog();
     }
 
     /**
      * Get guardian records for a specific PWD
      */
-    public function getByPWD($request, $response, $args)
+    public function getByPWD(int $pwdId): string
     {
-        $pwdId = (int)$args['pwd_id'];
-
         // Check if PWD exists
         $pwd = $this->pwdModel->getByPWDId($pwdId);
         if (!$pwd) {
-            $response->getBody()->write(json_encode([
-                'error' => 'PWD record not found'
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(404);
+            return json_encode([
+                'status' => 'error',
+                'message' => "PWD record not found with ID: {$pwdId}"
+            ], JSON_PRETTY_PRINT);
         }
 
         $guardians = $this->guardianModel->getByPWDId($pwdId);
 
-        $response->getBody()->write(json_encode([
+        return json_encode([
+            'status' => 'success',
             'pwd' => $pwd,
-            'guardians' => $guardians
-        ]));
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withStatus(200);
+            'guardians' => $guardians,
+            'message' => null
+        ], JSON_PRETTY_PRINT);
     }
 
     /**
      * Get a specific guardian record
      */
-    public function show($request, $response, $args)
+    public function show(int $guardianId): string
     {
-        $guardianId = (int)$args['id'];
         $guardian = $this->guardianModel->getById($guardianId);
 
         if (!$guardian) {
-            $response->getBody()->write(json_encode([
-                'error' => 'Guardian record not found'
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(404);
+            return json_encode([
+                'status' => 'error',
+                'message' => "Guardian record not found with ID: {$guardianId}"
+            ], JSON_PRETTY_PRINT);
         }
 
-        $response->getBody()->write(json_encode($guardian));
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withStatus(200);
+        return json_encode([
+            'status' => 'success',
+            'guardian' => $guardian,
+            'message' => null
+        ], JSON_PRETTY_PRINT);
     }
 
     /**
      * Create a new guardian record
      */
-    public function create($request, $response)
+    public function create(array $data, int $userId = null): string
     {
-        $data = $request->getParsedBody();
-        $userId = $request->getAttribute('user_id');
-
         if (!isset($data['pwd_id'])) {
-            $response->getBody()->write(json_encode([
-                'error' => 'PWD ID is required'
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(400);
+            return json_encode([
+                'status' => 'error',
+                'message' => 'PWD ID is required'
+            ], JSON_PRETTY_PRINT);
         }
 
         // Check if PWD exists
         $pwd = $this->pwdModel->getByPWDId($data['pwd_id']);
         if (!$pwd) {
-            $response->getBody()->write(json_encode([
-                'error' => 'PWD record not found'
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(404);
+            return json_encode([
+                'status' => 'error',
+                'message' => 'PWD record not found'
+            ], JSON_PRETTY_PRINT);
         }
 
         $guardianId = $this->guardianModel->create($data);
 
         if (!$guardianId) {
-            $response->getBody()->write(json_encode([
-                'error' => 'Failed to create guardian record: ' . $this->guardianModel->getLastError()
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(400);
+            return json_encode([
+                'status' => 'error',
+                'message' => 'Failed to create guardian record: ' . $this->guardianModel->getLastError()
+            ], JSON_PRETTY_PRINT);
         }
 
-        $this->logModel->log($userId, "Added guardian record for PWD #{$data['pwd_id']}");
+        if ($userId) {
+            $this->logModel->log($userId, "Added guardian record for PWD #{$data['pwd_id']}");
+        }
 
         $guardian = $this->guardianModel->getById($guardianId);
 
-        $response->getBody()->write(json_encode([
-            'message' => 'Guardian record created successfully',
-            'guardian' => $guardian
-        ]));
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withStatus(201);
+        return json_encode([
+            'status' => 'success',
+            'guardian' => $guardian,
+            'message' => 'Guardian record created successfully'
+        ], JSON_PRETTY_PRINT);
     }
 
     /**
      * Update an existing guardian record
      */
-    public function update($request, $response, $args)
+    public function update(int $guardianId, array $data, int $userId = null): string
     {
-        $guardianId = (int)$args['id'];
-        $data = $request->getParsedBody();
-        $userId = $request->getAttribute('user_id');
-
         // Check if guardian record exists
         $existingGuardian = $this->guardianModel->getById($guardianId);
         if (!$existingGuardian) {
-            $response->getBody()->write(json_encode([
-                'error' => 'Guardian record not found'
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(404);
+            return json_encode([
+                'status' => 'error',
+                'message' => "Guardian record not found with ID: {$guardianId}"
+            ], JSON_PRETTY_PRINT);
         }
 
         // If PWD ID is being changed, check if the new PWD exists
         if (isset($data['pwd_id']) && $data['pwd_id'] != $existingGuardian['pwd_id']) {
             $pwd = $this->pwdModel->getByPWDId($data['pwd_id']);
             if (!$pwd) {
-                $response->getBody()->write(json_encode([
-                    'error' => 'PWD record not found'
-                ]));
-                return $response
-                    ->withHeader('Content-Type', 'application/json')
-                    ->withStatus(404);
+                return json_encode([
+                    'status' => 'error',
+                    'message' => 'PWD record not found'
+                ], JSON_PRETTY_PRINT);
             }
         }
 
         $success = $this->guardianModel->update($guardianId, $data);
 
         if (!$success) {
-            $response->getBody()->write(json_encode([
-                'error' => 'Failed to update guardian record: ' . $this->guardianModel->getLastError()
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(400);
+            return json_encode([
+                'status' => 'error',
+                'message' => 'Failed to update guardian record: ' . $this->guardianModel->getLastError()
+            ], JSON_PRETTY_PRINT);
         }
 
-        $this->logModel->log($userId, "Updated guardian record #{$guardianId}");
+        if ($userId) {
+            $this->logModel->log($userId, "Updated guardian record #{$guardianId}");
+        }
 
         $guardian = $this->guardianModel->getById($guardianId);
 
-        $response->getBody()->write(json_encode([
-            'message' => 'Guardian record updated successfully',
-            'guardian' => $guardian
-        ]));
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withStatus(200);
+        return json_encode([
+            'status' => 'success',
+            'guardian' => $guardian,
+            'message' => 'Guardian record updated successfully'
+        ], JSON_PRETTY_PRINT);
     }
 
     /**
      * Delete a guardian record
      */
-    public function delete($request, $response, $args)
+    public function delete(int $guardianId, int $userId = null): string
     {
-        $guardianId = (int)$args['id'];
-        $userId = $request->getAttribute('user_id');
-
         // Check if guardian record exists
         $existingGuardian = $this->guardianModel->getById($guardianId);
         if (!$existingGuardian) {
-            $response->getBody()->write(json_encode([
-                'error' => 'Guardian record not found'
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(404);
+            return json_encode([
+                'status' => 'error',
+                'message' => "Guardian record not found with ID: {$guardianId}"
+            ], JSON_PRETTY_PRINT);
         }
 
         $success = $this->guardianModel->delete($guardianId);
 
         if (!$success) {
-            $response->getBody()->write(json_encode([
-                'error' => 'Failed to delete guardian record: ' . $this->guardianModel->getLastError()
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(400);
+            return json_encode([
+                'status' => 'error',
+                'message' => 'Failed to delete guardian record: ' . $this->guardianModel->getLastError()
+            ], JSON_PRETTY_PRINT);
         }
 
-        $this->logModel->log($userId, "Deleted guardian record #{$guardianId}");
+        if ($userId) {
+            $this->logModel->log($userId, "Deleted guardian record #{$guardianId}");
+        }
 
-        $response->getBody()->write(json_encode([
+        return json_encode([
+            'status' => 'success',
             'message' => 'Guardian record deleted successfully'
-        ]));
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withStatus(200);
+        ], JSON_PRETTY_PRINT);
     }
 
     /**
      * Get guardian relationship statistics
      */
-    public function getStatistics($request, $response)
+    public function getStatistics(?int $communityId = null): string
     {
-        $queryParams = $request->getQueryParams();
-        $communityId = isset($queryParams['community_id']) ? (int)$queryParams['community_id'] : null;
-
         if ($communityId) {
             $stats = $this->guardianModel->getStatsByCommunity($communityId);
         } else {
             $stats = $this->guardianModel->getStatsOverall();
         }
 
-        $response->getBody()->write(json_encode($stats));
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withStatus(200);
+        return json_encode([
+            'status' => !empty($stats) ? 'success' : 'error',
+            'stats' => $stats,
+            'message' => empty($stats) ? "No statistics found" : null
+        ], JSON_PRETTY_PRINT);
     }
 }

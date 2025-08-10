@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+require_once MODEL . 'SupportingDocument.php';
+require_once MODEL . 'ActivityLog.php';
+
 /**
  * SupportingDocumentController
  * 
@@ -9,97 +12,88 @@ declare(strict_types=1);
  */
 class SupportingDocumentController
 {
-    private SupportingDocument $documentModel;
-    private ActivityLog $logModel;
-    private $uploadsDir;
+    protected SupportingDocument $documentModel;
+    protected ActivityLog $logModel;
+    protected string $uploadsDir;
 
-    public function __construct(
-        SupportingDocument $documentModel,
-        ActivityLog $logModel
-    ) {
-        $this->documentModel = $documentModel;
-        $this->logModel = $logModel;
+    public function __construct()
+    {
+        $this->documentModel = new SupportingDocument();
+        $this->logModel = new ActivityLog();
         $this->uploadsDir = __DIR__ . '/../uploads/';
     }
 
     /**
      * Get all supporting documents
      */
-    public function index($request, $response)
+    public function index(): string
     {
-
         $documents = $this->documentModel->getAll();
-        $totalCount = $this->documentModel->getCount();
+        $totalCount = count($documents);
 
         $result = [
-            'documents' => $documents,
-            'total' => $totalCount,
-           
+            'status' => 'success',
+            'message' => null,
+            'data' => [
+                'documents' => $documents,
+                'total' => $totalCount
+            ]
         ];
 
-        $response->getBody()->write(json_encode($result));
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withStatus(200);
+        return json_encode($result, JSON_PRETTY_PRINT);
     }
 
     /**
      * Get documents by entity type and ID
      */
-    public function getByEntity($request, $response, $args)
+    public function getByEntity(string $entityType, int $entityId): string
     {
-        $entityType = $args['entity_type'];
-        $entityId = (int)$args['entity_id'];
-
         $documents = $this->documentModel->getByRelatedEntity($entityType, $entityId);
 
-        $response->getBody()->write(json_encode(['documents' => $documents]));
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withStatus(200);
+        return json_encode([
+            'status' => 'success',
+            'message' => null,
+            'data' => [
+                'documents' => $documents
+            ]
+        ], JSON_PRETTY_PRINT);
     }
 
     /**
      * Get document by ID
      */
-    public function show($request, $response, $args)
+    public function show(int $documentId): string
     {
-        $documentId = (int)$args['id'];
         $document = $this->documentModel->getById($documentId);
 
         if (!$document) {
-            $response->getBody()->write(json_encode([
-                'error' => 'Document not found'
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(404);
+            return json_encode([
+                'status' => 'error',
+                'message' => 'Document not found'
+            ], JSON_PRETTY_PRINT);
         }
 
-        $response->getBody()->write(json_encode($document));
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withStatus(200);
+        return json_encode([
+            'status' => 'success',
+            'message' => null,
+            'data' => $document
+        ], JSON_PRETTY_PRINT);
     }
 
     /**
      * Upload a new document
      */
-    public function upload($request, $response)
+    public function upload(array $uploadedFiles, array $data, ?int $userId = null): string
     {
-        $userId = $request->getAttribute('user_id');
-        $uploadedFiles = $request->getUploadedFiles();
-        $entityType = $request->getParsedBody()['entity_type'] ?? '';
-        $entityId = (int)($request->getParsedBody()['entity_id'] ?? 0);
-        $documentType = $request->getParsedBody()['document_type'] ?? '';
+        $entityType = $data['entity_type'] ?? '';
+        $entityId = (int)($data['entity_id'] ?? 0);
+        $documentType = $data['document_type'] ?? '';
 
         if (empty($uploadedFiles['document']) || empty($entityType) || $entityId === 0 || empty($documentType)) {
-            $response->getBody()->write(json_encode([
-                'error' => 'Missing required parameters: document, entity_type, entity_id, or document_type'
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(400);
+            return json_encode([
+                'status' => 'error',
+                'message' => 'Missing required parameters: document, entity_type, entity_id, or document_type'
+            ], JSON_PRETTY_PRINT);
         }
 
         // Create upload directory if it doesn't exist
@@ -110,12 +104,10 @@ class SupportingDocumentController
         $uploadedFile = $uploadedFiles['document'];
 
         if ($uploadedFile->getError() !== UPLOAD_ERR_OK) {
-            $response->getBody()->write(json_encode([
-                'error' => 'Upload failed with error code ' . $uploadedFile->getError()
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(400);
+            return json_encode([
+                'status' => 'error',
+                'message' => 'Upload failed with error code ' . $uploadedFile->getError()
+            ], JSON_PRETTY_PRINT);
         }
 
         $extension = pathinfo($uploadedFile->getClientFilename(), PATHINFO_EXTENSION);
@@ -139,81 +131,79 @@ class SupportingDocumentController
         $documentId = $this->documentModel->create($documentData);
 
         if (!$documentId) {
-            $response->getBody()->write(json_encode([
-                'error' => 'Failed to record document in database: ' . $this->documentModel->getLastError()
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(500);
+            return json_encode([
+                'status' => 'error',
+                'message' => 'Failed to record document in database: ' . $this->documentModel->getLastError()
+            ], JSON_PRETTY_PRINT);
         }
 
-        $this->logModel->log($userId, "Uploaded document {$uploadedFile->getClientFilename()} for {$entityType} #{$entityId}");
+        if ($userId) {
+            $this->logModel->log($userId, "Uploaded document {$uploadedFile->getClientFilename()} for {$entityType} #{$entityId}");
+        }
 
         $document = $this->documentModel->getById($documentId);
 
-        $response->getBody()->write(json_encode([
+        return json_encode([
+            'status' => 'success',
             'message' => 'Document uploaded successfully',
-            'document' => $document
-        ]));
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withStatus(201);
+            'data' => $document
+        ], JSON_PRETTY_PRINT);
     }
 
     /**
-     * Download a document
+     * Get document download information
+     * Note: This method returns download info instead of actual file streaming
+     * as that requires direct response manipulation
      */
-    public function download($request, $response, $args)
+    public function getDownloadInfo(int $documentId, ?int $userId = null): string
     {
-        $documentId = (int)$args['id'];
         $document = $this->documentModel->getById($documentId);
 
         if (!$document) {
-            $response->getBody()->write(json_encode([
-                'error' => 'Document not found'
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(404);
+            return json_encode([
+                'status' => 'error',
+                'message' => 'Document not found'
+            ], JSON_PRETTY_PRINT);
         }
 
         $filePath = $this->uploadsDir . $document['file_path'];
 
         if (!file_exists($filePath)) {
-            $response->getBody()->write(json_encode([
-                'error' => 'Document file not found on server'
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(404);
+            return json_encode([
+                'status' => 'error',
+                'message' => 'Document file not found on server'
+            ], JSON_PRETTY_PRINT);
         }
 
-        $userId = $request->getAttribute('user_id');
-        $this->logModel->log($userId, "Downloaded document {$document['file_name']} (ID: {$documentId})");
+        if ($userId) {
+            $this->logModel->log($userId, "Downloaded document {$document['file_name']} (ID: {$documentId})");
+        }
 
-        $fileStream = fopen($filePath, 'rb');
-
-        return $response->withHeader('Content-Type', $document['mime_type'])
-            ->withHeader('Content-Disposition', 'attachment; filename="' . $document['file_name'] . '"')
-            ->withHeader('Content-Length', $document['file_size'])
-            ->withBody(new \Slim\Psr7\Stream($fileStream));
+        return json_encode([
+            'status' => 'success',
+            'message' => 'Document download info retrieved successfully',
+            'data' => [
+                'document_id' => $documentId,
+                'file_name' => $document['file_name'],
+                'mime_type' => $document['mime_type'],
+                'file_size' => $document['file_size'],
+                'download_url' => "/api/v1/documents/{$documentId}/download"
+            ]
+        ], JSON_PRETTY_PRINT);
     }
 
     /**
      * Delete a document
      */
-    public function delete($request, $response, $args)
+    public function delete(int $documentId, ?int $userId = null): string
     {
-        $documentId = (int)$args['id'];
         $document = $this->documentModel->getById($documentId);
 
         if (!$document) {
-            $response->getBody()->write(json_encode([
-                'error' => 'Document not found'
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(404);
+            return json_encode([
+                'status' => 'error',
+                'message' => 'Document not found'
+            ], JSON_PRETTY_PRINT);
         }
 
         // Delete the file if it exists
@@ -226,22 +216,19 @@ class SupportingDocumentController
         $success = $this->documentModel->delete($documentId);
 
         if (!$success) {
-            $response->getBody()->write(json_encode([
-                'error' => 'Failed to delete document: ' . $this->documentModel->getLastError()
-            ]));
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withStatus(500);
+            return json_encode([
+                'status' => 'error',
+                'message' => 'Failed to delete document: ' . $this->documentModel->getLastError()
+            ], JSON_PRETTY_PRINT);
         }
 
-        $userId = $request->getAttribute('user_id');
-        $this->logModel->log($userId, "Deleted document {$document['file_name']} (ID: {$documentId})");
+        if ($userId) {
+            $this->logModel->log($userId, "Deleted document {$document['file_name']} (ID: {$documentId})");
+        }
 
-        $response->getBody()->write(json_encode([
+        return json_encode([
+            'status' => 'success',
             'message' => 'Document deleted successfully'
-        ]));
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withStatus(200);
+        ], JSON_PRETTY_PRINT);
     }
 }
