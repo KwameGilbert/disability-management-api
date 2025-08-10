@@ -1,10 +1,7 @@
 <?php
 declare(strict_types=1);
 
-use PDO;
-use PDOException;
-
-require_once __DIR__ . '/../config/Database.php';
+require_once CONFIG . 'Database.php';
 
 /**
  * Users Model aligned to database/schema.sql

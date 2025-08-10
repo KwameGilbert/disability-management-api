@@ -1,6 +1,6 @@
 <?php
 define('BASE', __DIR__ . '/../');
-define('ROUTES', BASE . 'src/routes/');
+define('ROUTE', BASE . 'src/routes/');
 define('MODEL', BASE . 'src/model/');
 define('CONTROLLER', BASE . 'src/controller/');
 define('CONFIG', BASE . 'src/config/');
@@ -86,7 +86,7 @@ $app->add(new ContentLengthMiddleware());
 
 // Default welcome route
 $app->get('/', function ($request, $response) {
-    $data = ['message' => 'Welcome to Hotel Management and Booking API', 'status' => 'running'];
+    $data = ['message' => 'Welcome to Patience With Disability  API', 'status' => 'running'];
     $payload = json_encode($data);
     $response->getBody()->write($payload);
     return $response->withHeader('Content-Type', 'application/json');
@@ -100,7 +100,7 @@ $app->get('/hello', function ($request, $response, $args) {
 });
 
 // Include routes
-(require_once ROUTES . 'api.php')($app);
+(require_once ROUTE . 'api.php')($app);
 
 // Add Not Found Handler - this must be added after all other routes are defined
 $app->map(['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], '/{routes:.+}', function ($request, $response) {
