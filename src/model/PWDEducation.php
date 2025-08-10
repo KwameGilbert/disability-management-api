@@ -204,4 +204,69 @@ class PWDEducation
             return false;
         }
     }
+
+    /**
+     * Delete all education records for a specific PWD
+     */
+    public function deleteByPWDId(int $pwdId): bool
+    {
+        try {
+            $stmt = $this->db->prepare("DELETE FROM {$this->tableName} WHERE pwd_id = :pwd_id");
+            return $this->executeQuery($stmt, ['pwd_id' => $pwdId]);
+        } catch (PDOException $e) {
+            $this->lastError = 'Failed to delete education records for PWD: ' . $e->getMessage();
+            error_log($this->lastError);
+            return false;
+        }
+    }
+
+    /**
+     * Get statistics of education levels
+     */
+    public function getStatsOverall(): array
+    {
+        try {
+            $sql = "SELECT 
+                      education_level, 
+                      COUNT(*) as count 
+                    FROM {$this->tableName}
+                    GROUP BY education_level
+                    ORDER BY count DESC";
+            $stmt = $this->db->prepare($sql);
+            if (!$this->executeQuery($stmt)) {
+                return [];
+            }
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            $this->lastError = 'Failed to get education statistics: ' . $e->getMessage();
+            error_log($this->lastError);
+            return [];
+        }
+    }
+
+    /**
+     * Get statistics of education levels by community
+     */
+    public function getStatsByCommunity(int $communityId): array
+    {
+        try {
+            $sql = "SELECT 
+                      e.education_level, 
+                      COUNT(*) as count 
+                    FROM {$this->tableName} e
+                    JOIN pwd_records p ON e.pwd_id = p.pwd_id
+                    WHERE p.community_id = :community_id
+                    GROUP BY e.education_level
+                    ORDER BY count DESC";
+            $stmt = $this->db->prepare($sql);
+            if (!$this->executeQuery($stmt, ['community_id' => $communityId])) {
+                return [];
+            }
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            $this->lastError = 'Failed to get community education statistics: ' . $e->getMessage();
+            error_log($this->lastError);
+            return [];
+        }
+    }
 }

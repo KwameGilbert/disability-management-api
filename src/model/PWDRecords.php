@@ -128,7 +128,7 @@ class PWDRecords
     /**
      * Get PWD record by ID with related data
      */
-    public function getById(int $pwdId): ?array
+    public function getByPWDId(int $pwdId): ?array
     {
         try {
             $sql = "SELECT 
@@ -375,7 +375,7 @@ class PWDRecords
     public function update(int $pwdId, array $data): bool
     {
         try {
-            if (!$this->getById($pwdId)) {
+            if (!$this->getByPWDId($pwdId)) {
                 $this->lastError = 'PWD record not found';
                 return false;
             }
@@ -395,7 +395,7 @@ class PWDRecords
                 return false;
             }
 
-            $currentPwd = $this->getById($pwdId);
+            $currentPwd = $this->getByPWDId($pwdId);
 
             $sql = "UPDATE {$this->tableName} SET ";
             $fields = [
@@ -450,7 +450,7 @@ class PWDRecords
     public function updateStatus(int $pwdId, string $status): bool
     {
         try {
-            if (!$this->getById($pwdId)) {
+            if (!$this->getByPWDId($pwdId)) {
                 $this->lastError = 'PWD record not found';
                 return false;
             }
@@ -480,7 +480,7 @@ class PWDRecords
     public function delete(int $pwdId): bool
     {
         try {
-            if (!$this->getById($pwdId)) {
+            if (!$this->getByPWDId($pwdId)) {
                 $this->lastError = 'PWD record not found';
                 return false;
             }

@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+require_once MODEL . 'PWDRecords.php';
+require_once MODEL . 'PWDGuardian.php';
+require_once MODEL . 'PWDEducation.php';
+require_once MODEL . 'PWDSupportNeeds.php';
+require_once MODEL . 'SupportingDocument.php';
+require_once MODEL . 'ActivityLog.php';
+require_once CONFIG . 'Database.php';
+
 /**
  * PWDRecordsController
  * 
@@ -10,30 +18,25 @@ declare(strict_types=1);
  */
 class PWDRecordsController
 {
-    private PWDRecords $pwdModel;
-    private PWDGuardian $guardianModel;
-    private PWDEducation $educationModel;
-    private PWDSupportNeeds $supportNeedsModel;
-    private SupportingDocument $documentModel;
-    private ActivityLog $logModel;
-    private PDO $db;
+    protected PWDRecords $pwdModel;
+    protected PWDGuardian $guardianModel;
+    protected PWDEducation $educationModel;
+    protected PWDSupportNeeds $supportNeedsModel;
+    protected SupportingDocument $documentModel;
+    protected ActivityLog $logModel;
+    protected PDO $db;
 
-    public function __construct(
-        PWDRecords $pwdModel,
-        PWDGuardian $guardianModel,
-        PWDEducation $educationModel,
-        PWDSupportNeeds $supportNeedsModel,
-        SupportingDocument $documentModel,
-        ActivityLog $logModel,
-        PDO $db
-    ) {
-        $this->pwdModel = $pwdModel;
-        $this->guardianModel = $guardianModel;
-        $this->educationModel = $educationModel;
-        $this->supportNeedsModel = $supportNeedsModel;
-        $this->documentModel = $documentModel;
-        $this->logModel = $logModel;
-        $this->db = $db;
+    public function __construct()
+    {
+        $this->pwdModel = new PWDRecords();
+        $this->guardianModel = new PWDGuardian();
+        $this->educationModel = new PWDEducation();
+        $this->supportNeedsModel = new PWDSupportNeeds();
+        $this->documentModel = new SupportingDocument();
+        $this->logModel = new ActivityLog();
+        
+        $database = new Database();
+        $this->db = $database->getConnection();
     }
 
     /**
@@ -111,7 +114,7 @@ class PWDRecordsController
     public function show($request, $response, $args)
     {
         $pwdId = (int)$args['id'];
-        $pwd = $this->pwdModel->getById($pwdId);
+        $pwd = $this->pwdModel->getByPWDId($pwdId);
 
         if (!$pwd) {
             $response->getBody()->write(json_encode([
@@ -154,7 +157,7 @@ class PWDRecordsController
             }
 
             // 2. Add guardians if provided
-            if (isset($data['guardians']) && is_array($data['guardians'])) {
+            if (isset($data['guardians']) && is_array($data['guardians']) && !empty($data['guardians'])) {
                 foreach ($data['guardians'] as $guardian) {
                     $guardian['pwd_id'] = $pwdId;
                     $guardianId = $this->guardianModel->create($guardian);
@@ -166,7 +169,7 @@ class PWDRecordsController
             }
 
             // 3. Add education records if provided
-            if (isset($data['education']) && is_array($data['education'])) {
+            if (isset($data['education']) && is_array($data['education']) && !empty($data['education'])) {
                 foreach ($data['education'] as $education) {
                     $education['pwd_id'] = $pwdId;
                     $educationId = $this->educationModel->create($education);
@@ -178,7 +181,7 @@ class PWDRecordsController
             }
 
             // 4. Add support needs if provided
-            if (isset($data['support_needs']) && is_array($data['support_needs'])) {
+            if (isset($data['support_needs']) && is_array($data['support_needs']) && !empty($data['support_needs'])) {
                 foreach ($data['support_needs'] as $need) {
                     $need['pwd_id'] = $pwdId;
                     $needId = $this->supportNeedsModel->create($need);
@@ -195,7 +198,7 @@ class PWDRecordsController
             // Commit the transaction
             $this->db->commit();
 
-            $pwd = $this->pwdModel->getById($pwdId);
+            $pwd = $this->pwdModel->getByPWDId($pwdId);
             $pwd['guardians'] = $this->guardianModel->getByPWDId($pwdId);
             $pwd['education'] = $this->educationModel->getByPWDId($pwdId);
             $pwd['support_needs'] = $this->supportNeedsModel->getByPWDId($pwdId);
@@ -230,7 +233,7 @@ class PWDRecordsController
         $userId = $request->getAttribute('user_id'); // Assumes middleware sets this
 
         // Check if PWD record exists
-        $existingPWD = $this->pwdModel->getById($pwdId);
+        $existingPWD = $this->pwdModel->getByPWDId($pwdId);
         if (!$existingPWD) {
             $response->getBody()->write(json_encode([
                 'error' => 'PWD record not found'
@@ -252,7 +255,7 @@ class PWDRecordsController
             }
 
             // 2. Update guardians if provided
-            if (isset($data['guardians']) && is_array($data['guardians'])) {
+            if (isset($data['guardians']) && is_array($data['guardians']) && !empty($data['guardians'])) {
                 // Optional: Delete existing guardians first
                 // $this->guardianModel->deleteByPWDId($pwdId);
 
@@ -276,7 +279,7 @@ class PWDRecordsController
             }
 
             // 3. Update education records if provided
-            if (isset($data['education']) && is_array($data['education'])) {
+            if (isset($data['education']) && is_array($data['education']) && !empty($data['education'])) {
                 // Optional: Delete existing education records first
                 // $this->educationModel->deleteByPWDId($pwdId);
 
@@ -300,7 +303,7 @@ class PWDRecordsController
             }
 
             // 4. Update support needs if provided
-            if (isset($data['support_needs']) && is_array($data['support_needs'])) {
+            if (isset($data['support_needs']) && is_array($data['support_needs']) && !empty($data['support_needs'])) {
                 // Optional: Delete existing support needs first
                 // $this->supportNeedsModel->deleteByPWDId($pwdId);
 
@@ -329,7 +332,7 @@ class PWDRecordsController
             // Commit the transaction
             $this->db->commit();
 
-            $pwd = $this->pwdModel->getById($pwdId);
+            $pwd = $this->pwdModel->getByPWDId($pwdId);
             $pwd['guardians'] = $this->guardianModel->getByPWDId($pwdId);
             $pwd['education'] = $this->educationModel->getByPWDId($pwdId);
             $pwd['support_needs'] = $this->supportNeedsModel->getByPWDId($pwdId);
@@ -372,7 +375,7 @@ class PWDRecordsController
                 ->withStatus(400);
         }
 
-        $existingPWD = $this->pwdModel->getById($pwdId);
+        $existingPWD = $this->pwdModel->getByPWDId($pwdId);
         if (!$existingPWD) {
             $response->getBody()->write(json_encode([
                 'error' => 'PWD record not found'
@@ -395,7 +398,7 @@ class PWDRecordsController
 
         $this->logModel->log($userId, "Updated PWD status for {$existingPWD['full_name']} to {$data['status']}");
 
-        $pwd = $this->pwdModel->getById($pwdId);
+        $pwd = $this->pwdModel->getByPWDId($pwdId);
 
         $response->getBody()->write(json_encode([
             'message' => 'PWD status updated successfully',
@@ -414,7 +417,7 @@ class PWDRecordsController
         $pwdId = (int)$args['id'];
         $userId = $request->getAttribute('user_id');
 
-        $existingPWD = $this->pwdModel->getById($pwdId);
+        $existingPWD = $this->pwdModel->getByPWDId($pwdId);
         if (!$existingPWD) {
             $response->getBody()->write(json_encode([
                 'error' => 'PWD record not found'
@@ -465,9 +468,4 @@ class PWDRecordsController
 
         $stats = $this->pwdModel->getStatsByQuarterYear($quarter, $year);
 
-        $response->getBody()->write(json_encode($stats));
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withStatus(200);
-    }
-}
+        $response->

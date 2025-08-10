@@ -27,18 +27,14 @@ class SupportingDocumentController
      */
     public function index($request, $response)
     {
-        $queryParams = $request->getQueryParams();
-        $limit = isset($queryParams['limit']) ? (int)$queryParams['limit'] : null;
-        $offset = isset($queryParams['offset']) ? (int)$queryParams['offset'] : null;
 
-        $documents = $this->documentModel->getAll($limit, $offset);
+        $documents = $this->documentModel->getAll();
         $totalCount = $this->documentModel->getCount();
 
         $result = [
             'documents' => $documents,
             'total' => $totalCount,
-            'limit' => $limit,
-            'offset' => $offset
+           
         ];
 
         $response->getBody()->write(json_encode($result));

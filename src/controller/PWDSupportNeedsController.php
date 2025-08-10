@@ -31,7 +31,7 @@ class PWDSupportNeedsController
         $pwdId = (int)$args['pwd_id'];
 
         // Check if PWD exists
-        $pwd = $this->pwdModel->getById($pwdId);
+        $pwd = $this->pwdModel->getByPWDId($pwdId);
         if (!$pwd) {
             $response->getBody()->write(json_encode([
                 'error' => 'PWD record not found'
@@ -93,7 +93,7 @@ class PWDSupportNeedsController
         }
 
         // Check if PWD exists
-        $pwd = $this->pwdModel->getById($data['pwd_id']);
+        $pwd = $this->pwdModel->getByPWDId($data['pwd_id']);
         if (!$pwd) {
             $response->getBody()->write(json_encode([
                 'error' => 'PWD record not found'
@@ -149,7 +149,7 @@ class PWDSupportNeedsController
 
         // If PWD ID is being changed, check if the new PWD exists
         if (isset($data['pwd_id']) && $data['pwd_id'] != $existingNeed['pwd_id']) {
-            $pwd = $this->pwdModel->getById($data['pwd_id']);
+            $pwd = $this->pwdModel->getByPWDId($data['pwd_id']);
             if (!$pwd) {
                 $response->getBody()->write(json_encode([
                     'error' => 'PWD record not found'
@@ -227,20 +227,20 @@ class PWDSupportNeedsController
     /**
      * Get statistics on common support needs
      */
-    public function getStatistics($request, $response)
-    {
-        $queryParams = $request->getQueryParams();
-        $communityId = isset($queryParams['community_id']) ? (int)$queryParams['community_id'] : null;
+    // public function getStatistics($request, $response)
+    // {
+    //     $queryParams = $request->getQueryParams();
+    //     $communityId = isset($queryParams['community_id']) ? (int)$queryParams['community_id'] : null;
 
-        if ($communityId) {
-            $stats = $this->supportNeedsModel->getStatsByCommunity($communityId);
-        } else {
-            $stats = $this->supportNeedsModel->getStatsOverall();
-        }
+    //     if ($communityId) {
+    //         $stats = $this->supportNeedsModel->getStatsByCommunity($communityId);
+    //     } else {
+    //         $stats = $this->supportNeedsModel->getStatsOverall();
+    //     }
 
-        $response->getBody()->write(json_encode($stats));
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withStatus(200);
-    }
+    //     $response->getBody()->write(json_encode($stats));
+    //     return $response
+    //         ->withHeader('Content-Type', 'application/json')
+    //         ->withStatus(200);
+    // }
 }

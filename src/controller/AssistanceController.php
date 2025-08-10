@@ -37,10 +37,6 @@ class AssistanceController
      */
     public function index($request, $response)
     {
-        $queryParams = $request->getQueryParams();
-        $limit = isset($queryParams['limit']) ? (int)$queryParams['limit'] : null;
-        $offset = isset($queryParams['offset']) ? (int)$queryParams['offset'] : null;
-
         $assistanceRecords = $this->assistanceModel->getAll($limit, $offset);
         $totalCount = $this->assistanceModel->getCount();
 

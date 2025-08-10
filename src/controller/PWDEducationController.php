@@ -31,7 +31,7 @@ class PWDEducationController
         $pwdId = (int)$args['pwd_id'];
 
         // Check if PWD exists
-        $pwd = $this->pwdModel->getById($pwdId);
+        $pwd = $this->pwdModel->getByPWDId($pwdId);
         if (!$pwd) {
             $response->getBody()->write(json_encode([
                 'error' => 'PWD record not found'
@@ -93,7 +93,7 @@ class PWDEducationController
         }
 
         // Check if PWD exists
-        $pwd = $this->pwdModel->getById($data['pwd_id']);
+        $pwd = $this->pwdModel->getByPWDId($data['pwd_id']);
         if (!$pwd) {
             $response->getBody()->write(json_encode([
                 'error' => 'PWD record not found'
@@ -149,7 +149,7 @@ class PWDEducationController
 
         // If PWD ID is being changed, check if the new PWD exists
         if (isset($data['pwd_id']) && $data['pwd_id'] != $existingEducation['pwd_id']) {
-            $pwd = $this->pwdModel->getById($data['pwd_id']);
+            $pwd = $this->pwdModel->getByPWDId($data['pwd_id']);
             if (!$pwd) {
                 $response->getBody()->write(json_encode([
                     'error' => 'PWD record not found'

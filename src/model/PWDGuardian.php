@@ -189,4 +189,90 @@ class PWDGuardian
             return false;
         }
     }
+
+    /**
+     * Delete all guardians for a specific PWD
+     */
+    public function deleteByPWDId(int $pwdId): bool
+    {
+        try {
+            $stmt = $this->db->prepare("DELETE FROM {$this->tableName} WHERE pwd_id = :pwd_id");
+            return $this->executeQuery($stmt, ['pwd_id' => $pwdId]);
+        } catch (PDOException $e) {
+            $this->lastError = 'Failed to delete guardians for PWD: ' . $e->getMessage();
+            error_log($this->lastError);
+            return false;
+        }
+    }
+
+    /**
+     * Get all guardians for a specific PWD
+     */
+    public function getByPWDId(int $pwdId): array
+    {
+        try {
+            $sql = "SELECT guardian_id, pwd_id, name, occupation, phone, relationship 
+                   FROM {$this->tableName} 
+                   WHERE pwd_id = :pwd_id";
+            $stmt = $this->db->prepare($sql);
+            if (!$this->executeQuery($stmt, ['pwd_id' => $pwdId])) {
+                return [];
+            }
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            $this->lastError = 'Failed to get guardians by PWD ID: ' . $e->getMessage();
+            error_log($this->lastError);
+            return [];
+        }
+    }
+
+    /**
+     * Get statistics of guardian relationships
+     */
+    public function getStatsOverall(): array
+    {
+        try {
+            $sql = "SELECT 
+                      relationship, 
+                      COUNT(*) as count 
+                    FROM {$this->tableName}
+                    GROUP BY relationship
+                    ORDER BY count DESC";
+            $stmt = $this->db->prepare($sql);
+            if (!$this->executeQuery($stmt)) {
+                return [];
+            }
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            $this->lastError = 'Failed to get guardian statistics: ' . $e->getMessage();
+            error_log($this->lastError);
+            return [];
+        }
+    }
+
+    /**
+     * Get statistics of guardian relationships by community
+     */
+    public function getStatsByCommunity(int $communityId): array
+    {
+        try {
+            $sql = "SELECT 
+                      g.relationship, 
+                      COUNT(*) as count 
+                    FROM {$this->tableName} g
+                    JOIN pwd_records p ON g.pwd_id = p.pwd_id
+                    WHERE p.community_id = :community_id
+                    GROUP BY g.relationship
+                    ORDER BY count DESC";
+            $stmt = $this->db->prepare($sql);
+            if (!$this->executeQuery($stmt, ['community_id' => $communityId])) {
+                return [];
+            }
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            $this->lastError = 'Failed to get community guardian statistics: ' . $e->getMessage();
+            error_log($this->lastError);
+            return [];
+        }
+    }
 }
