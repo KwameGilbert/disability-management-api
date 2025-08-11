@@ -15,6 +15,8 @@ return function ($app): void {
         '/v1/assistance-types' =>  '/v1/AssistanceTypesRoute.php',
         '/v1/assistance-requests' =>  '/v1/AssistanceRequestSRoute.php',
         '/v1/logs' =>  '/v1/ActivityLogsRoute.php',
+        '/logs-viewer' =>  '/v1/LogsViewerRoute.php',
+        
         // Add more routes as needed
     ];
 
