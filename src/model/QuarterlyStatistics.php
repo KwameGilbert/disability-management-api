@@ -14,10 +14,10 @@ class QuarterlyStatistics
 {
     /** @var PDO */
     protected PDO $db;
-    
+
     /** @var string */
     private string $viewName = 'quarterly_statistics';
-    
+
     /** @var string */
     private string $lastError = '';
 
@@ -46,7 +46,7 @@ class QuarterlyStatistics
     {
         return $this->lastError;
     }
-    
+
     /**
      * Execute a prepared statement with error handling
      * 
@@ -64,7 +64,7 @@ class QuarterlyStatistics
             return false;
         }
     }
-    
+
     /**
      * Get all quarterly statistics
      * 
@@ -75,11 +75,11 @@ class QuarterlyStatistics
         try {
             $sql = "SELECT * FROM {$this->viewName} ORDER BY year DESC, quarter DESC";
             $stmt = $this->db->prepare($sql);
-            
+
             if (!$this->executeQuery($stmt)) {
                 return [];
             }
-            
+
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
             $this->lastError = 'Failed to get quarterly statistics: ' . $e->getMessage();
@@ -98,16 +98,24 @@ class QuarterlyStatistics
     public function getStatisticsByPeriod(string $quarter, int $year): ?array
     {
         try {
-            $stmt = $this->conn->prepare("SELECT * FROM quarterly_statistics WHERE quarter = :quarter AND year = :year");
-            $stmt->bindParam(':quarter', $quarter, PDO::PARAM_STR);
-            $stmt->bindParam(':year', $year, PDO::PARAM_INT);
-            $stmt->execute();
+            $sql = "SELECT * FROM {$this->viewName} WHERE quarter = :quarter AND year = :year";
+            $stmt = $this->db->prepare($sql);
+
+            $params = [
+                ':quarter' => $quarter,
+                ':year' => $year
+            ];
+
+            if (!$this->executeQuery($stmt, $params)) {
+                return null;
+            }
 
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             return $result !== false ? $result : null;
-        } catch (Exception $e) {
-            error_log("Error getting quarterly statistics for period: " . $e->getMessage());
-            throw new Exception("Failed to retrieve quarterly statistics for the specified period");
+        } catch (\PDOException $e) {
+            $this->lastError = 'Failed to get statistics for period: ' . $e->getMessage();
+            error_log($this->lastError);
+            return null;
         }
     }
 
@@ -125,17 +133,23 @@ class QuarterlyStatistics
                       SUM(total_assessed) as total_assessed,
                       SUM(pending) as pending
                     FROM 
-                      quarterly_statistics 
+                      {$this->viewName}
                     GROUP BY 
                       year 
                     ORDER BY 
                       year DESC";
 
-            $stmt = $this->conn->query($sql);
+            $stmt = $this->db->prepare($sql);
+
+            if (!$this->executeQuery($stmt)) {
+                return [];
+            }
+
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            error_log("Error getting yearly statistics: " . $e->getMessage());
-            throw new Exception("Failed to retrieve yearly statistics");
+        } catch (\PDOException $e) {
+            $this->lastError = 'Failed to get yearly statistics: ' . $e->getMessage();
+            error_log($this->lastError);
+            return [];
         }
     }
 
@@ -148,14 +162,18 @@ class QuarterlyStatistics
     {
         try {
             $currentYear = date('Y');
-            $stmt = $this->conn->prepare("SELECT * FROM quarterly_statistics WHERE year = :year ORDER BY quarter");
-            $stmt->bindParam(':year', $currentYear, PDO::PARAM_INT);
-            $stmt->execute();
+            $sql = "SELECT * FROM {$this->viewName} WHERE year = :year ORDER BY quarter";
+            $stmt = $this->db->prepare($sql);
+
+            if (!$this->executeQuery($stmt, [':year' => $currentYear])) {
+                return [];
+            }
 
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            error_log("Error getting current year statistics: " . $e->getMessage());
-            throw new Exception("Failed to retrieve current year statistics");
+        } catch (\PDOException $e) {
+            $this->lastError = 'Failed to get current year statistics: ' . $e->getMessage();
+            error_log($this->lastError);
+            return [];
         }
     }
 
@@ -168,6 +186,11 @@ class QuarterlyStatistics
     public function getComparativeStatistics(array $years): array
     {
         try {
+            if (empty($years)) {
+                $this->lastError = 'No years provided for comparison';
+                return [];
+            }
+
             $placeholders = str_repeat('?,', count($years) - 1) . '?';
             $sql = "SELECT 
                       year, 
@@ -175,7 +198,7 @@ class QuarterlyStatistics
                       SUM(total_assessed) as total_assessed,
                       SUM(pending) as pending
                     FROM 
-                      quarterly_statistics 
+                      {$this->viewName} 
                     WHERE 
                       year IN ($placeholders)
                     GROUP BY 
@@ -183,17 +206,22 @@ class QuarterlyStatistics
                     ORDER BY 
                       year";
 
-            $stmt = $this->conn->prepare($sql);
-            $i = 1;
-            foreach ($years as $year) {
-                $stmt->bindValue($i++, $year, PDO::PARAM_INT);
+            $stmt = $this->db->prepare($sql);
+
+            // Bind each year to its placeholder
+            foreach ($years as $index => $year) {
+                $stmt->bindValue($index + 1, $year, \PDO::PARAM_INT);
             }
-            $stmt->execute();
+
+            if (!$this->executeQuery($stmt)) {
+                return [];
+            }
 
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            error_log("Error getting comparative statistics: " . $e->getMessage());
-            throw new Exception("Failed to retrieve comparative statistics");
+        } catch (\PDOException $e) {
+            $this->lastError = 'Failed to get comparative statistics: ' . $e->getMessage();
+            error_log($this->lastError);
+            return [];
         }
     }
 }

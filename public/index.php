@@ -34,19 +34,6 @@ if (class_exists(LoggerFactory::class)) {
 // Set the container on AppFactory
 AppFactory::setContainer($container);
 
-// Register models in the container
-$container->set('App\Model\QuarterlyStatistics', function ($c) {
-    // Get database connection from Database.php
-    $db = require_once CONFIG . 'Database.php';
-    return new App\Model\QuarterlyStatistics($db);
-});
-
-$container->set('App\Model\ActivityLogs', function ($c) {
-    // Get database connection from Database.php
-    $db = require_once CONFIG . 'Database.php';
-    return new App\Model\ActivityLogs($db);
-});
-
 // Create Slim App instance
 $app = AppFactory::create();
 // Get environment setting
