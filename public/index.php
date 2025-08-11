@@ -4,6 +4,8 @@ define('ROUTE', BASE . 'src/routes/');
 define('MODEL', BASE . 'src/model/');
 define('CONTROLLER', BASE . 'src/controller/');
 define('CONFIG', BASE . 'src/config/');
+define('HELPER', BASE . 'src/helper/');
+define('MIDDLEWARE', BASE .'/src/middleware/');
 
 require_once BASE . 'vendor/autoload.php';
 
@@ -12,9 +14,10 @@ use Slim\Factory\AppFactory;
 use Dotenv\Dotenv;
 use Slim\Middleware\ContentLengthMiddleware;
 
-require_once BASE . 'src/middleware/RequestResponseLoggerMiddleware.php';
-require_once BASE . 'src/helper/ErrorHandler.php';
-require_once BASE . 'src/helper/LoggerFactory.php';
+require_once MIDDLEWARE . 'RequestResponseLoggerMiddleware.php';
+require_once MIDDLEWARE . 'ActivityLoggerMiddleware.php';
+require_once HELPER . 'ErrorHandler.php';
+require_once HELPER . 'LoggerFactory.php';
 
 // Load environment variables
 $dotenv = Dotenv::createImmutable(BASE);
