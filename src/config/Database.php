@@ -17,7 +17,7 @@ class Database
     public function __construct()
     {
         // Check environment - default to local if not specified
-        $env = isset($_ENV['ENVIRONMENT']) ? $_ENV['ENVIRONMENT'] : 'development';
+        $env = isset($_ENV['APP_ENV']) ? $_ENV['APP_ENV'] : 'development';
         $prefix = $env === 'production' ? 'PROD_DB_' : 'LOCAL_DB_';
         
         // Set database connection parameters based on environment
