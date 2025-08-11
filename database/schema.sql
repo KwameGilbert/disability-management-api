@@ -50,6 +50,12 @@ CREATE TABLE assistance_types (
     assistance_type_name VARCHAR(100) UNIQUE NOT NULL
 );
 
+-- Table: genders
+CREATE TABLE genders (
+    gender_id INT PRIMARY KEY AUTO_INCREMENT,
+    gender_name VARCHAR(20) UNIQUE NOT NULL
+);
+
 -- Table: pwd_records (all PWD info in one table)
 CREATE TABLE pwd_records (
     pwd_id INT PRIMARY KEY AUTO_INCREMENT,
@@ -87,12 +93,6 @@ CREATE TABLE pwd_records (
     FOREIGN KEY (assistance_type_needed_id) REFERENCES assistance_types(assistance_type_id)
 );
 
--- Table: genders
-CREATE TABLE genders (
-    gender_id INT PRIMARY KEY AUTO_INCREMENT,
-    gender_name VARCHAR(20) UNIQUE NOT NULL
-);
-
 -- Table: assistance_requests (tracking assistance process)
 CREATE TABLE assistance_requests (
     request_id INT PRIMARY KEY AUTO_INCREMENT,
@@ -119,12 +119,22 @@ CREATE TABLE activity_logs (
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
--- Table: quarterly_statistics
-CREATE TABLE quarterly_statistics (
-    stat_id INT PRIMARY KEY AUTO_INCREMENT,
-    quarter ENUM('Q1','Q2','Q3','Q4') NOT NULL,
-    year YEAR NOT NULL,
-    total_registered_pwd INT NOT NULL,
-    total_assessed INT NOT NULL,
-    pending INT NOT NULL
-);
+-- View: quarterly_statistics
+CREATE VIEW quarterly_statistics AS
+SELECT 
+    CONCAT(quarter, '-', year) AS period_id,
+    quarter,
+    year,
+    COUNT(*) AS total_registered_pwd,
+    SUM(CASE WHEN pr.pwd_id IN (
+        SELECT DISTINCT beneficiary_id FROM assistance_requests 
+        WHERE status = 'assessed'
+    ) THEN 1 ELSE 0 END) AS total_assessed,
+    SUM(CASE WHEN pr.pwd_id IN (
+        SELECT DISTINCT beneficiary_id FROM assistance_requests 
+        WHERE status = 'pending'
+    ) THEN 1 ELSE 0 END) AS pending
+FROM 
+    pwd_records pr
+GROUP BY 
+    quarter, year;

@@ -2,98 +2,173 @@
 
 declare(strict_types=1);
 
-require_once CONTROLLER . 'PWDRecordsController.php';
+/**
+ * PWD Records API Routes
+ * 
+ * These routes handle PWD records management operations (CRUD)
+ * PWD records table has complex relationships with multiple other tables
+ */
+
+require_once CONTROLLER . 'PwdRecordsController.php';
 
 return function ($app): void {
-    $pwdController = new PWDRecordsController();
+    $pwdRecordsController = new PwdRecordsController();
 
-    // Get all PWD records with pagination
-    $app->get('/v1/pwd-records', function ($request, $response) use ($pwdController) {
+    // Get all PWD records with pagination and optional filtering
+    $app->get('/v1/pwd-records', function ($request, $response) use ($pwdRecordsController) {
         $queryParams = $request->getQueryParams();
-        $limit = isset($queryParams['limit']) ? (int)$queryParams['limit'] : null;
-        $offset = isset($queryParams['offset']) ? (int)$queryParams['offset'] : null;
+        $page = isset($queryParams['page']) ? (int) $queryParams['page'] : 1;
+        $perPage = isset($queryParams['per_page']) ? (int) $queryParams['per_page'] : 20;
 
-        $result = $pwdController->index($limit, $offset);
+        // Extract filter parameters
+        $filters = [];
+        $filterableFields = ['quarter', 'year', 'status', 'community_id', 'disability_category_id', 'search'];
+        foreach ($filterableFields as $field) {
+            if (isset($queryParams[$field]) && $queryParams[$field] !== '') {
+                $filters[$field] = $queryParams[$field];
+            }
+        }
+
+        $result = $pwdRecordsController->listPwdRecords($page, $perPage, $filters);
         $response->getBody()->write($result);
         return $response->withHeader('Content-Type', 'application/json');
     });
 
     // Get PWD record by ID
-    $app->get('/v1/pwd-records/{id}', function ($request, $response, $args) use ($pwdController) {
+    $app->get('/v1/pwd-records/{id}', function ($request, $response, $args) use ($pwdRecordsController) {
         $id = isset($args['id']) ? (int) $args['id'] : 0;
-        $result = $pwdController->show($id);
-        $response->getBody()->write($result);
-        return $response->withHeader('Content-Type', 'application/json');
-    });
-
-    // Get PWD records by status
-    $app->get('/v1/pwd-records/status/{status}', function ($request, $response, $args) use ($pwdController) {
-        $status = $args['status'] ?? '';
-        $result = $pwdController->getByStatus($status);
-        $response->getBody()->write($result);
-        return $response->withHeader('Content-Type', 'application/json');
-    });
-
-    // Get PWD records by community
-    $app->get('/v1/pwd-records/community/{community_id}', function ($request, $response, $args) use ($pwdController) {
-        $communityId = isset($args['community_id']) ? (int) $args['community_id'] : 0;
-        $result = $pwdController->getByCommunity($communityId);
-        $response->getBody()->write($result);
-        return $response->withHeader('Content-Type', 'application/json');
-    });
-
-    // Search PWD records
-    $app->get('/v1/pwd-records/search/{term}', function ($request, $response, $args) use ($pwdController) {
-        $term = $args['term'] ?? '';
-        $result = $pwdController->search($term);
+        $result = $pwdRecordsController->getPwdRecordById($id);
         $response->getBody()->write($result);
         return $response->withHeader('Content-Type', 'application/json');
     });
 
     // Create a new PWD record
-    $app->post('/v1/pwd-records', function ($request, $response) use ($pwdController) {
+    // Complex request with many fields, see schema.sql for complete field list
+    $app->post('/v1/pwd-records', function ($request, $response) use ($pwdRecordsController) {
+        // Get authenticated user from JWT token or session
+        $userId = $request->getAttribute('user_id') ?? 0;
+
+        if (!$userId) {
+            $response->getBody()->write(json_encode([
+                'status' => 'error',
+                'message' => 'Authentication required',
+            ]));
+            return $response->withHeader('Content-Type', 'application/json')
+                ->withStatus(401);
+        }
+
         $data = json_decode((string) $request->getBody(), true) ?? [];
-        $userId = $request->getAttribute('user_id');
-        $result = $pwdController->create($data, $userId);
+        $result = $pwdRecordsController->createPwdRecord($data, $userId);
         $response->getBody()->write($result);
         return $response->withHeader('Content-Type', 'application/json');
     });
 
-    // Update PWD record by ID
-    $app->patch('/v1/pwd-records/{id}', function ($request, $response, $args) use ($pwdController) {
+    // Update an existing PWD record
+    $app->patch('/v1/pwd-records/{id}', function ($request, $response, $args) use ($pwdRecordsController) {
+        // Get authenticated user from JWT token or session
+        $userId = $request->getAttribute('user_id') ?? 0;
+
+        if (!$userId) {
+            $response->getBody()->write(json_encode([
+                'status' => 'error',
+                'message' => 'Authentication required',
+            ]));
+            return $response->withHeader('Content-Type', 'application/json')
+                ->withStatus(401);
+        }
+
         $id = isset($args['id']) ? (int) $args['id'] : 0;
         $data = json_decode((string) $request->getBody(), true) ?? [];
-        $userId = $request->getAttribute('user_id');
-        $result = $pwdController->update($id, $data, $userId);
+        $result = $pwdRecordsController->updatePwdRecord($id, $data, $userId);
         $response->getBody()->write($result);
         return $response->withHeader('Content-Type', 'application/json');
     });
 
-    // Update PWD status
-    $app->patch('/v1/pwd-records/{id}/status', function ($request, $response, $args) use ($pwdController) {
+    // Update PWD record status
+    // Expects: {"status":"pending|approved|declined"}
+    $app->patch('/v1/pwd-records/{id}/status', function ($request, $response, $args) use ($pwdRecordsController) {
+        // Get authenticated user from JWT token or session
+        $userId = $request->getAttribute('user_id') ?? 0;
+
+        if (!$userId) {
+            $response->getBody()->write(json_encode([
+                'status' => 'error',
+                'message' => 'Authentication required',
+            ]));
+            return $response->withHeader('Content-Type', 'application/json')
+                ->withStatus(401);
+        }
+
         $id = isset($args['id']) ? (int) $args['id'] : 0;
         $data = json_decode((string) $request->getBody(), true) ?? [];
-        $userId = $request->getAttribute('user_id');
-        $status = $data['status'] ?? '';
-        $result = $pwdController->updateStatus($id, $status, $userId);
+
+        if (empty($data['status'])) {
+            $response->getBody()->write(json_encode([
+                'status' => 'error',
+                'message' => 'Status is required',
+            ]));
+            return $response->withHeader('Content-Type', 'application/json')
+                ->withStatus(400);
+        }
+
+        $result = $pwdRecordsController->updatePwdStatus($id, $data['status'], $userId);
         $response->getBody()->write($result);
         return $response->withHeader('Content-Type', 'application/json');
     });
 
-    // Delete PWD record by ID
-    $app->delete('/v1/pwd-records/{id}', function ($request, $response, $args) use ($pwdController) {
+    // Delete PWD record
+    $app->delete('/v1/pwd-records/{id}', function ($request, $response, $args) use ($pwdRecordsController) {
+        // Get authenticated user from JWT token or session
+        $userId = $request->getAttribute('user_id') ?? 0;
+
+        if (!$userId) {
+            $response->getBody()->write(json_encode([
+                'status' => 'error',
+                'message' => 'Authentication required',
+            ]));
+            return $response->withHeader('Content-Type', 'application/json')
+                ->withStatus(401);
+        }
+
         $id = isset($args['id']) ? (int) $args['id'] : 0;
-        $userId = $request->getAttribute('user_id');
-        $result = $pwdController->delete($id, $userId);
+        $result = $pwdRecordsController->deletePwdRecord($id, $userId);
         $response->getBody()->write($result);
         return $response->withHeader('Content-Type', 'application/json');
     });
 
-    // Get statistics by quarter and year
-    $app->get('/v1/pwd-records/statistics/{quarter}/{year}', function ($request, $response, $args) use ($pwdController) {
+    // Get PWD records by quarter and year
+    $app->get('/v1/pwd-records/quarterly/{quarter}/{year}', function ($request, $response, $args) use ($pwdRecordsController) {
         $quarter = $args['quarter'] ?? '';
         $year = isset($args['year']) ? (int) $args['year'] : 0;
-        $result = $pwdController->getStatistics($quarter, $year);
+        $queryParams = $request->getQueryParams();
+        $page = isset($queryParams['page']) ? (int) $queryParams['page'] : 1;
+        $perPage = isset($queryParams['per_page']) ? (int) $queryParams['per_page'] : 20;
+
+        $result = $pwdRecordsController->getRecordsByQuarterAndYear($quarter, $year, $page, $perPage);
+        $response->getBody()->write($result);
+        return $response->withHeader('Content-Type', 'application/json');
+    });
+
+    // Get PWD records by disability category
+    $app->get('/v1/pwd-records/category/{categoryId}', function ($request, $response, $args) use ($pwdRecordsController) {
+        $categoryId = isset($args['categoryId']) ? (int) $args['categoryId'] : 0;
+        $queryParams = $request->getQueryParams();
+        $page = isset($queryParams['page']) ? (int) $queryParams['page'] : 1;
+        $perPage = isset($queryParams['per_page']) ? (int) $queryParams['per_page'] : 20;
+
+        $result = $pwdRecordsController->getRecordsByCategory($categoryId, $page, $perPage);
+        $response->getBody()->write($result);
+        return $response->withHeader('Content-Type', 'application/json');
+    });
+
+    // Get PWD records by community
+    $app->get('/v1/pwd-records/community/{communityId}', function ($request, $response, $args) use ($pwdRecordsController) {
+        $communityId = isset($args['communityId']) ? (int) $args['communityId'] : 0;
+        $queryParams = $request->getQueryParams();
+        $page = isset($queryParams['page']) ? (int) $queryParams['page'] : 1;
+        $perPage = isset($queryParams['per_page']) ? (int) $queryParams['per_page'] : 20;
+
+        $result = $pwdRecordsController->getRecordsByCommunity($communityId, $page, $perPage);
         $response->getBody()->write($result);
         return $response->withHeader('Content-Type', 'application/json');
     });

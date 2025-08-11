@@ -6,6 +6,7 @@ define('CONTROLLER', BASE . 'src/controller/');
 define('CONFIG', BASE . 'src/config/');
 
 require_once BASE . 'vendor/autoload.php';
+
 use DI\Container;
 use Slim\Factory\AppFactory;
 use Dotenv\Dotenv;
@@ -32,6 +33,20 @@ if (class_exists(LoggerFactory::class)) {
 
 // Set the container on AppFactory
 AppFactory::setContainer($container);
+
+// Register models in the container
+$container->set('App\Model\QuarterlyStatistics', function ($c) {
+    // Get database connection from Database.php
+    $db = require_once CONFIG . 'Database.php';
+    return new App\Model\QuarterlyStatistics($db);
+});
+
+$container->set('App\Model\ActivityLogs', function ($c) {
+    // Get database connection from Database.php
+    $db = require_once CONFIG . 'Database.php';
+    return new App\Model\ActivityLogs($db);
+});
+
 // Create Slim App instance
 $app = AppFactory::create();
 // Get environment setting
@@ -57,6 +72,9 @@ $errorMiddleware->setDefaultErrorHandler($errorHandler);
 if ($container->has('httpLogger')) {
     $app->add(new RequestResponseLoggerMiddleware($container->get('httpLogger')));
 }
+
+// Register activity logger middleware for certain routes
+$app->add(new ActivityLoggerMiddleware()); // Make sure auth middleware runs first
 
 // Add CORS middleware FIRST, before anything else
 $app->add(function ($request, $handler) {

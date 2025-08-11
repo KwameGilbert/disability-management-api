@@ -2,6 +2,13 @@
 
 declare(strict_types=1);
 
+/**
+ * Communities API Routes
+ * 
+ * These routes handle community management operations (CRUD)
+ * Communities table structure: community_id, community_name
+ */
+
 require_once CONTROLLER . '/CommunitiesController.php';
 
 return function ($app): void {
@@ -22,15 +29,8 @@ return function ($app): void {
         return $response->withHeader('Content-Type', 'application/json');
     });
 
-    // Get community by name
-    $app->get('/v1/communities/name/{name}', function ($request, $response, $args) use ($communitiesController) {
-        $name = $args['name'] ?? '';
-        $result = $communitiesController->getCommunityByName($name);
-        $response->getBody()->write($result);
-        return $response->withHeader('Content-Type', 'application/json');
-    });
-
     // Create a new community
+    // Expects: {"community_name":"..."}
     $app->post('/v1/communities', function ($request, $response) use ($communitiesController) {
         $data = json_decode((string) $request->getBody(), true) ?? [];
         $result = $communitiesController->createCommunity($data);
@@ -38,7 +38,8 @@ return function ($app): void {
         return $response->withHeader('Content-Type', 'application/json');
     });
 
-    // Update a community by ID
+    // Update community by ID
+    // Expects: {"community_name":"..."}
     $app->patch('/v1/communities/{id}', function ($request, $response, $args) use ($communitiesController) {
         $id = isset($args['id']) ? (int) $args['id'] : 0;
         $data = json_decode((string) $request->getBody(), true) ?? [];
@@ -47,7 +48,7 @@ return function ($app): void {
         return $response->withHeader('Content-Type', 'application/json');
     });
 
-    // Delete a community by ID
+    // Delete community by ID
     $app->delete('/v1/communities/{id}', function ($request, $response, $args) use ($communitiesController) {
         $id = isset($args['id']) ? (int) $args['id'] : 0;
         $result = $communitiesController->deleteCommunity($id);

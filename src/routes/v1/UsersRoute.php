@@ -1,5 +1,14 @@
 <?php
+
 declare(strict_types=1);
+
+/**
+ * Users API Routes
+ * 
+ * These routes handle user management operations (CRUD), authentication,
+ * and password reset flows. Users have a 'role' ENUM field with values 
+ * 'admin' or 'officer' as defined in the database schema.
+ */
 
 require_once CONTROLLER . '/UsersController.php';
 
@@ -38,6 +47,7 @@ return function ($app): void {
     });
 
     // Create a new user
+    // Expects: {"role":"admin|officer", "username":"...", "email":"...", "password":"...", "profile_image":"..." (optional)}
     $app->post('/v1/users', function ($request, $response) use ($userController) {
         $data = json_decode((string) $request->getBody(), true) ?? [];
         $result = $userController->createUser($data);
@@ -46,6 +56,7 @@ return function ($app): void {
     });
 
     // Update user by ID
+    // Accepts: {"role":"admin|officer", "username":"...", "email":"...", "profile_image":"..."} (all fields optional)
     $app->patch('/v1/users/{id}', function ($request, $response, $args) use ($userController) {
         $id = isset($args['id']) ? (int) $args['id'] : 0;
         $data = json_decode((string) $request->getBody(), true) ?? [];
@@ -63,6 +74,7 @@ return function ($app): void {
     });
 
     // Login
+    // Expects: {"username":"..." or "email":"...", "password":"..."}
     $app->post('/v1/users/login', function ($request, $response) use ($userController) {
         $data = json_decode((string) $request->getBody(), true) ?? [];
         $usernameOrEmail = (string) ($data['username'] ?? $data['email'] ?? '');
@@ -112,5 +124,3 @@ return function ($app): void {
         return $response->withHeader('Content-Type', 'application/json');
     });
 };
-
-

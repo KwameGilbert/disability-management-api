@@ -9,6 +9,8 @@ return function ($app): void {
         '/v1/users' => ROUTE . '/v1/UsersRoute.php',
         '/v1/roles' => ROUTE . '/v1/RolesRoute.php',
         '/v1/communities' => ROUTE . '/v1/CommunitiesRoute.php',
+        '/v1/statistics' => ROUTE . '/v1/QuarterlyStatisticsRoute.php',
+        '/v1/pwd-records' => ROUTE . '/v1/PWDRecordsRoute.php',
         // Add more routes as needed
     ];
 
