@@ -94,7 +94,7 @@ $app->add(new ContentLengthMiddleware());
 
 // Default welcome route
 $app->get('/', function ($request, $response) {
-    $data = ['message' => 'Welcome to Patience With Disability  API', 'status' => 'running'];
+    $data = ['message' => 'Welcome to Persons With Disability Management System API', 'status' => 'running'];
     $payload = json_encode($data);
     $response->getBody()->write($payload);
     return $response->withHeader('Content-Type', 'application/json');
