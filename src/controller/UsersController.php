@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 require_once MODEL . 'Users.php';
@@ -7,6 +8,7 @@ require_once MODEL . 'Users.php';
  * UsersController
  *
  * Handles user CRUD, authentication, and password reset flows.
+ * Works with Users model that has 'role' as an ENUM('admin','officer')
  */
 class UsersController
 {
@@ -70,11 +72,11 @@ class UsersController
 
     /**
      * Create a new user
-     * Expected data: role_id(int), username, email, password, profile_image(optional)
+     * Expected data: role(string), username, email, password, profile_image(optional)
      */
     public function createUser(array $data): string
     {
-        $required = ['role_id', 'username', 'email', 'password'];
+        $required = ['role', 'username', 'email', 'password'];
         $missing = [];
         foreach ($required as $field) {
             if (!isset($data[$field]) || $data[$field] === '') {
@@ -85,6 +87,15 @@ class UsersController
             return json_encode([
                 'status' => 'error',
                 'message' => 'Missing required fields: ' . implode(', ', $missing),
+            ], JSON_PRETTY_PRINT);
+        }
+
+        // Validate role is either 'admin' or 'officer'
+        if (!in_array($data['role'], ['admin', 'officer'])) {
+            return json_encode([
+                'status' => 'error',
+                'field' => 'role',
+                'message' => "Role must be either 'admin' or 'officer'",
             ], JSON_PRETTY_PRINT);
         }
 
@@ -115,7 +126,7 @@ class UsersController
 
     /**
      * Update an existing user
-     * Allowed fields: role_id, username, email, profile_image
+     * Allowed fields: role, username, email, profile_image
      */
     public function updateUser(int $id, array $data): string
     {
@@ -124,6 +135,15 @@ class UsersController
             return json_encode([
                 'status' => 'error',
                 'message' => 'User not found',
+            ], JSON_PRETTY_PRINT);
+        }
+
+        // Validate role if it's being updated
+        if (isset($data['role']) && !in_array($data['role'], ['admin', 'officer'])) {
+            return json_encode([
+                'status' => 'error',
+                'field' => 'role',
+                'message' => "Role must be either 'admin' or 'officer'",
             ], JSON_PRETTY_PRINT);
         }
 
@@ -284,5 +304,3 @@ class UsersController
 if (!class_exists('UserController', false)) {
     class_alias('UsersController', 'UserController');
 }
-
-

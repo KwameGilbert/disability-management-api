@@ -1,6 +1,6 @@
 {
-  "name": "nolex/smart-tax",
-  "description": "A robust, scalable, and secure digital platform for managing municipal tax collection processes. The system supports multi-role access for revenue officers, tax collectors, IT admins, and municipal executives. It enables both online and offline tax collection, invoice generation, real-time reporting, and secure communication via email and SMS.",
+  "name": "nolex/pwd-management",
+  "description": "A comprehensive API for managing information about persons with disabilities, their personal data, assistance requests, and support services provided. The system facilitates efficient tracking, processing, and reporting of disability-related services and supports multi-role access for case workers, administrators, and service providers.",
   "license": "MIT",
   "type": "project",
   "scripts": {

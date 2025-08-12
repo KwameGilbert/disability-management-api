@@ -6,9 +6,10 @@ require_once CONFIG . 'Database.php';
 
 /**
  * Communities Model
- *
- * Handles database operations for the communities table.
- * Schema: communities(community_id, community_name)
+ * 
+ * Handles database operations for communities table
+ * Table structure:
+ * - communities(community_id, community_name)
  */
 class Communities
 {
@@ -25,18 +26,15 @@ class Communities
     {
         try {
             $database = new Database();
-            $connection = $database->getConnection();
-            if (!$connection) {
-                throw new PDOException('Database connection is null');
-            }
-            $this->db = $connection;
+            $this->db = $database->getConnection();
         } catch (PDOException $e) {
-            $this->lastError = 'Database connection failed: ' . $e->getMessage();
-            error_log($this->lastError);
-            throw $e;
+            $this->lastError = "Database connection failed: " . $e->getMessage();
         }
     }
 
+    /**
+     * Get the last error message
+     */
     public function getLastError(): string
     {
         return $this->lastError;
@@ -50,155 +48,128 @@ class Communities
         try {
             return $statement->execute($params);
         } catch (PDOException $e) {
-            $this->lastError = 'Query execution failed: ' . $e->getMessage();
-            error_log($this->lastError . ' - SQL: ' . $statement->queryString);
+            $this->lastError = "Query execution failed: " . $e->getMessage();
             return false;
         }
     }
 
     /**
-     * Fetch all communities
+     * Get all communities
      */
     public function getAll(): array
     {
         try {
-            $sql = "SELECT community_id, community_name FROM {$this->tableName} ORDER BY community_name";
-            $stmt = $this->db->prepare($sql);
+            $query = "SELECT * FROM {$this->tableName} ORDER BY community_name ASC";
+            $stmt = $this->db->prepare($query);
+
             if (!$this->executeQuery($stmt)) {
                 return [];
             }
+
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
-            $this->lastError = 'Failed to get communities: ' . $e->getMessage();
-            error_log($this->lastError);
+            $this->lastError = "Error fetching communities: " . $e->getMessage();
             return [];
         }
     }
 
     /**
-     * Get a community by ID
+     * Get community by ID
      */
     public function getById(int $communityId): ?array
     {
         try {
-            $sql = "SELECT community_id, community_name FROM {$this->tableName} WHERE community_id = :community_id";
-            $stmt = $this->db->prepare($sql);
+            $query = "SELECT * FROM {$this->tableName} WHERE community_id = :community_id";
+            $stmt = $this->db->prepare($query);
+
             if (!$this->executeQuery($stmt, ['community_id' => $communityId])) {
                 return null;
             }
+
             $community = $stmt->fetch(PDO::FETCH_ASSOC);
             return $community ?: null;
         } catch (PDOException $e) {
-            $this->lastError = 'Failed to get community by ID: ' . $e->getMessage();
-            error_log($this->lastError);
+            $this->lastError = "Error fetching community: " . $e->getMessage();
             return null;
         }
     }
 
     /**
-     * Get a community by name
+     * Get community by name
      */
     public function getByName(string $communityName): ?array
     {
         try {
-            $sql = "SELECT community_id, community_name FROM {$this->tableName} WHERE community_name = :community_name";
-            $stmt = $this->db->prepare($sql);
+            $query = "SELECT * FROM {$this->tableName} WHERE community_name = :community_name";
+            $stmt = $this->db->prepare($query);
+
             if (!$this->executeQuery($stmt, ['community_name' => $communityName])) {
                 return null;
             }
+
             $community = $stmt->fetch(PDO::FETCH_ASSOC);
             return $community ?: null;
         } catch (PDOException $e) {
-            $this->lastError = 'Failed to get community by name: ' . $e->getMessage();
-            error_log($this->lastError);
+            $this->lastError = "Error fetching community: " . $e->getMessage();
             return null;
         }
     }
 
     /**
      * Create a new community
-     * @param array{community_name: string} $data
+     * @param array{community_name:string} $data
      * @return int|false Inserted community_id or false on failure
      */
     public function create(array $data): int|false
     {
         try {
-            if (!isset($data['community_name']) || $data['community_name'] === '') {
-                $this->lastError = 'Missing required field: community_name';
-                return false;
-            }
+            $query = "INSERT INTO {$this->tableName} (community_name) VALUES (:community_name)";
+            $stmt = $this->db->prepare($query);
 
-            if ($this->getByName($data['community_name'])) {
-                $this->lastError = 'Community already exists with this name';
-                return false;
-            }
-
-            $sql = "INSERT INTO {$this->tableName} (community_name) VALUES (:community_name)";
-            $stmt = $this->db->prepare($sql);
             if (!$this->executeQuery($stmt, ['community_name' => $data['community_name']])) {
                 return false;
             }
 
             return (int) $this->db->lastInsertId();
         } catch (PDOException $e) {
-            $this->lastError = 'Failed to create community: ' . $e->getMessage();
-            error_log($this->lastError);
+            $this->lastError = "Error creating community: " . $e->getMessage();
             return false;
         }
     }
 
     /**
-     * Update a community
+     * Update community
      */
     public function update(int $communityId, array $data): bool
     {
         try {
-            if (!$this->getById($communityId)) {
-                $this->lastError = 'Community not found';
-                return false;
-            }
+            $query = "UPDATE {$this->tableName} SET community_name = :community_name WHERE community_id = :community_id";
+            $stmt = $this->db->prepare($query);
 
-            if (!isset($data['community_name']) || $data['community_name'] === '') {
-                $this->lastError = 'Community name is required for update';
-                return false;
-            }
-
-            $existing = $this->getByName($data['community_name']);
-            if ($existing && (int) $existing['community_id'] !== $communityId) {
-                $this->lastError = 'Community name already in use by another community';
-                return false;
-            }
-
-            $sql = "UPDATE {$this->tableName} SET community_name = :community_name WHERE community_id = :community_id";
-            $stmt = $this->db->prepare($sql);
-            return $this->executeQuery($stmt, [
+            $params = [
                 'community_name' => $data['community_name'],
                 'community_id' => $communityId
-            ]);
+            ];
+
+            return $this->executeQuery($stmt, $params);
         } catch (PDOException $e) {
-            $this->lastError = 'Failed to update community: ' . $e->getMessage();
-            error_log($this->lastError);
+            $this->lastError = "Error updating community: " . $e->getMessage();
             return false;
         }
     }
 
     /**
-     * Delete a community
+     * Delete community
      */
     public function delete(int $communityId): bool
     {
         try {
-            if (!$this->getById($communityId)) {
-                $this->lastError = 'Community not found';
-                return false;
-            }
+            $query = "DELETE FROM {$this->tableName} WHERE community_id = :community_id";
+            $stmt = $this->db->prepare($query);
 
-            $sql = "DELETE FROM {$this->tableName} WHERE community_id = :community_id";
-            $stmt = $this->db->prepare($sql);
             return $this->executeQuery($stmt, ['community_id' => $communityId]);
         } catch (PDOException $e) {
-            $this->lastError = 'Failed to delete community: ' . $e->getMessage();
-            error_log($this->lastError);
+            $this->lastError = "Error deleting community: " . $e->getMessage();
             return false;
         }
     }

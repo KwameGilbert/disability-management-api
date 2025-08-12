@@ -4,16 +4,20 @@ define('ROUTE', BASE . 'src/routes/');
 define('MODEL', BASE . 'src/model/');
 define('CONTROLLER', BASE . 'src/controller/');
 define('CONFIG', BASE . 'src/config/');
+define('HELPER', BASE . 'src/helper/');
+define('MIDDLEWARE', BASE .'/src/middleware/');
 
 require_once BASE . 'vendor/autoload.php';
+
 use DI\Container;
 use Slim\Factory\AppFactory;
 use Dotenv\Dotenv;
 use Slim\Middleware\ContentLengthMiddleware;
 
-require_once BASE . 'src/middleware/RequestResponseLoggerMiddleware.php';
-require_once BASE . 'src/helper/ErrorHandler.php';
-require_once BASE . 'src/helper/LoggerFactory.php';
+require_once MIDDLEWARE . 'RequestResponseLoggerMiddleware.php';
+require_once MIDDLEWARE . 'ActivityLoggerMiddleware.php';
+require_once HELPER . 'ErrorHandler.php';
+require_once HELPER . 'LoggerFactory.php';
 
 // Load environment variables
 $dotenv = Dotenv::createImmutable(BASE);
@@ -32,6 +36,7 @@ if (class_exists(LoggerFactory::class)) {
 
 // Set the container on AppFactory
 AppFactory::setContainer($container);
+
 // Create Slim App instance
 $app = AppFactory::create();
 // Get environment setting
@@ -57,6 +62,9 @@ $errorMiddleware->setDefaultErrorHandler($errorHandler);
 if ($container->has('httpLogger')) {
     $app->add(new RequestResponseLoggerMiddleware($container->get('httpLogger')));
 }
+
+// Register activity logger middleware for certain routes
+$app->add(new ActivityLoggerMiddleware()); // Make sure auth middleware runs first
 
 // Add CORS middleware FIRST, before anything else
 $app->add(function ($request, $handler) {
@@ -86,7 +94,7 @@ $app->add(new ContentLengthMiddleware());
 
 // Default welcome route
 $app->get('/', function ($request, $response) {
-    $data = ['message' => 'Welcome to Patience With Disability  API', 'status' => 'running'];
+    $data = ['message' => 'Welcome to Persons With Disability Management System API', 'status' => 'running'];
     $payload = json_encode($data);
     $response->getBody()->write($payload);
     return $response->withHeader('Content-Type', 'application/json');
