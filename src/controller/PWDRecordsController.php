@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-require_once MODEL . 'PwdRecords.php';
+require_once MODEL . 'PWDRecords.php';
 require_once MODEL . 'ActivityLogs.php';
 
 /**
