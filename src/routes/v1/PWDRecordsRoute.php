@@ -45,20 +45,8 @@ return function ($app): void {
     // Create a new PWD record
     // Complex request with many fields, see schema.sql for complete field list
     $app->post('/v1/pwd-records', function ($request, $response) use ($pwdRecordsController) {
-        // Get authenticated user from JWT token or session
-        $userId = $request->getAttribute('user_id') ?? 0;
-
-        if (!$userId) {
-            $response->getBody()->write(json_encode([
-                'status' => 'error',
-                'message' => 'Authentication required',
-            ]));
-            return $response->withHeader('Content-Type', 'application/json')
-                ->withStatus(401);
-        }
-
         $data = json_decode((string) $request->getBody(), true) ?? [];
-        $result = $pwdRecordsController->createPwdRecord($data, $userId);
+        $result = $pwdRecordsController->createPwdRecord($data);
         $response->getBody()->write($result);
         return $response->withHeader('Content-Type', 'application/json');
     });

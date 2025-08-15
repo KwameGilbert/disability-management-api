@@ -33,11 +33,11 @@ class PwdRecordsController
     {
         $page = max(1, $page); // Ensure page is at least 1
         $offset = ($page - 1) * $perPage;
-        
+
         $records = $this->pwdModel->getAll($perPage, $offset, $filters);
         $totalRecords = $this->pwdModel->getCount($filters);
         $totalPages = ceil($totalRecords / $perPage);
-        
+
         return json_encode([
             'status' => 'success',
             'data' => $records,
@@ -61,14 +61,14 @@ class PwdRecordsController
     public function getPwdRecordById(int $id): string
     {
         $record = $this->pwdModel->getById($id);
-        
+
         if (!$record) {
             return json_encode([
                 'status' => 'error',
                 'message' => "PWD record not found with id {$id}",
             ], JSON_PRETTY_PRINT);
         }
-        
+
         return json_encode([
             'status' => 'success',
             'data' => $record,
@@ -82,28 +82,59 @@ class PwdRecordsController
      * @param int $userId ID of user creating the record
      * @return string JSON response
      */
-    public function createPwdRecord(array $data, int $userId): string
+    public function createPwdRecord(array $data): string
     {
         // Validate required fields
         $requiredFields = ['quarter', 'year', 'gender_id', 'full_name', 'disability_category_id', 'disability_type_id', 'community_id'];
         $missingFields = [];
-        
         foreach ($requiredFields as $field) {
             if (empty($data[$field])) {
                 $missingFields[] = $field;
             }
         }
-        
         if (!empty($missingFields)) {
             return json_encode([
                 'status' => 'error',
                 'message' => 'Missing required fields: ' . implode(', ', $missingFields),
             ], JSON_PRETTY_PRINT);
         }
-        
-        // Set the user ID of the creator
-        $data['user_id'] = $userId;
-        
+
+        // Handle file uploads
+        $uploadDir = __DIR__ . '/../../public/uploads/pwd/';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0777, true);
+        }
+
+        // Handle profile_image (single file)
+        if (isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] === UPLOAD_ERR_OK) {
+            $fileTmp = $_FILES['profile_image']['tmp_name'];
+            $fileName = uniqid('profile_') . '_' . basename($_FILES['profile_image']['name']);
+            $destPath = $uploadDir . $fileName;
+            if (move_uploaded_file($fileTmp, $destPath)) {
+                $data['profile_image'] = 'uploads/pwd/' . $fileName;
+            }
+        }
+
+        // Handle supporting_documents (multiple files)
+        if (isset($_FILES['supporting_documents'])) {
+            $docs = [];
+            $files = $_FILES['supporting_documents'];
+            $count = is_array($files['name']) ? count($files['name']) : 0;
+            for ($i = 0; $i < $count; $i++) {
+                if ($files['error'][$i] === UPLOAD_ERR_OK) {
+                    $fileTmp = $files['tmp_name'][$i];
+                    $fileName = uniqid('doc_') . '_' . basename($files['name'][$i]);
+                    $destPath = $uploadDir . $fileName;
+                    if (move_uploaded_file($fileTmp, $destPath)) {
+                        $docs[] = 'uploads/pwd/' . $fileName;
+                    }
+                }
+            }
+            if (!empty($docs)) {
+                $data['supporting_documents'] = $docs;
+            }
+        }
+
         // Validate quarter format
         if (!in_array($data['quarter'], ['Q1', 'Q2', 'Q3', 'Q4'])) {
             return json_encode([
@@ -111,7 +142,7 @@ class PwdRecordsController
                 'message' => 'Invalid quarter format. Must be Q1, Q2, Q3, or Q4',
             ], JSON_PRETTY_PRINT);
         }
-        
+
         // Validate year format
         $currentYear = (int) date('Y');
         if (!is_numeric($data['year']) || (int)$data['year'] < 2000 || (int)$data['year'] > $currentYear + 1) {
@@ -120,32 +151,30 @@ class PwdRecordsController
                 'message' => "Invalid year. Must be between 2000 and {$currentYear} + 1",
             ], JSON_PRETTY_PRINT);
         }
-        
+
         // Validate foreign key relationships
         $validationErrors = $this->pwdModel->validateForeignKeys($data);
-        
         if (!empty($validationErrors)) {
             return json_encode([
                 'status' => 'error',
                 'message' => 'Validation errors: ' . implode(', ', $validationErrors),
             ], JSON_PRETTY_PRINT);
         }
-        
+
         // Create the PWD record
         $pwdId = $this->pwdModel->create($data);
-        
         if ($pwdId === false) {
             return json_encode([
                 'status' => 'error',
                 'message' => 'Failed to create PWD record: ' . $this->pwdModel->getLastError(),
             ], JSON_PRETTY_PRINT);
         }
-        
+        $userId = $data['user_id'];
         // Log the activity
         $this->logModel->logActivity($userId, "Created new PWD record with ID {$pwdId} for {$data['full_name']}");
-        
+
         $record = $this->pwdModel->getById((int) $pwdId);
-        
+
         return json_encode([
             'status' => 'success',
             'message' => 'PWD record created successfully',
@@ -171,7 +200,43 @@ class PwdRecordsController
                 'message' => "PWD record not found with id {$id}",
             ], JSON_PRETTY_PRINT);
         }
-        
+
+        // Handle file uploads
+        $uploadDir = __DIR__ . '/../../public/uploads/pwd/';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0777, true);
+        }
+
+        // Handle profile_image (single file)
+        if (isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] === UPLOAD_ERR_OK) {
+            $fileTmp = $_FILES['profile_image']['tmp_name'];
+            $fileName = uniqid('profile_') . '_' . basename($_FILES['profile_image']['name']);
+            $destPath = $uploadDir . $fileName;
+            if (move_uploaded_file($fileTmp, $destPath)) {
+                $data['profile_image'] = 'uploads/pwd/' . $fileName;
+            }
+        }
+
+        // Handle supporting_documents (multiple files)
+        if (isset($_FILES['supporting_documents'])) {
+            $docs = [];
+            $files = $_FILES['supporting_documents'];
+            $count = is_array($files['name']) ? count($files['name']) : 0;
+            for ($i = 0; $i < $count; $i++) {
+                if ($files['error'][$i] === UPLOAD_ERR_OK) {
+                    $fileTmp = $files['tmp_name'][$i];
+                    $fileName = uniqid('doc_') . '_' . basename($files['name'][$i]);
+                    $destPath = $uploadDir . $fileName;
+                    if (move_uploaded_file($fileTmp, $destPath)) {
+                        $docs[] = 'uploads/pwd/' . $fileName;
+                    }
+                }
+            }
+            if (!empty($docs)) {
+                $data['supporting_documents'] = $docs;
+            }
+        }
+
         // Validate quarter format if provided
         if (isset($data['quarter']) && !in_array($data['quarter'], ['Q1', 'Q2', 'Q3', 'Q4'])) {
             return json_encode([
@@ -179,7 +244,7 @@ class PwdRecordsController
                 'message' => 'Invalid quarter format. Must be Q1, Q2, Q3, or Q4',
             ], JSON_PRETTY_PRINT);
         }
-        
+
         // Validate year format if provided
         if (isset($data['year'])) {
             $currentYear = (int) date('Y');
@@ -190,32 +255,30 @@ class PwdRecordsController
                 ], JSON_PRETTY_PRINT);
             }
         }
-        
+
         // Validate foreign key relationships
         $validationErrors = $this->pwdModel->validateForeignKeys($data);
-        
         if (!empty($validationErrors)) {
             return json_encode([
                 'status' => 'error',
                 'message' => 'Validation errors: ' . implode(', ', $validationErrors),
             ], JSON_PRETTY_PRINT);
         }
-        
+
         // Update the PWD record
         $updated = $this->pwdModel->update($id, $data);
-        
         if (!$updated) {
             return json_encode([
                 'status' => 'error',
                 'message' => 'Failed to update PWD record: ' . $this->pwdModel->getLastError(),
             ], JSON_PRETTY_PRINT);
         }
-        
+
         // Log the activity
         $this->logModel->logActivity($userId, "Updated PWD record with ID {$id} for {$existing['full_name']}");
-        
+
         $record = $this->pwdModel->getById($id);
-        
+
         return json_encode([
             'status' => 'success',
             'message' => 'PWD record updated successfully',
@@ -240,20 +303,20 @@ class PwdRecordsController
                 'message' => "PWD record not found with id {$id}",
             ], JSON_PRETTY_PRINT);
         }
-        
+
         // Delete the PWD record
         $deleted = $this->pwdModel->delete($id);
-        
+
         if (!$deleted) {
             return json_encode([
                 'status' => 'error',
                 'message' => 'Failed to delete PWD record: ' . $this->pwdModel->getLastError(),
             ], JSON_PRETTY_PRINT);
         }
-        
+
         // Log the activity
         $this->logModel->logActivity($userId, "Deleted PWD record with ID {$id} for {$existing['full_name']}");
-        
+
         return json_encode([
             'status' => 'success',
             'message' => 'PWD record deleted successfully',
@@ -278,7 +341,7 @@ class PwdRecordsController
                 'message' => "PWD record not found with id {$id}",
             ], JSON_PRETTY_PRINT);
         }
-        
+
         // Validate status
         if (!in_array($status, ['pending', 'approved', 'declined'])) {
             return json_encode([
@@ -286,22 +349,22 @@ class PwdRecordsController
                 'message' => "Invalid status. Must be 'pending', 'approved', or 'declined'",
             ], JSON_PRETTY_PRINT);
         }
-        
+
         // Update the status
         $updated = $this->pwdModel->updateStatus($id, $status);
-        
+
         if (!$updated) {
             return json_encode([
                 'status' => 'error',
                 'message' => 'Failed to update PWD status: ' . $this->pwdModel->getLastError(),
             ], JSON_PRETTY_PRINT);
         }
-        
+
         // Log the activity
         $this->logModel->logActivity($userId, "Updated status of PWD record ID {$id} to '{$status}' for {$existing['full_name']}");
-        
+
         $record = $this->pwdModel->getById($id);
-        
+
         return json_encode([
             'status' => 'success',
             'message' => "PWD record status updated to '{$status}'",
@@ -327,15 +390,15 @@ class PwdRecordsController
                 'message' => 'Invalid quarter format. Must be Q1, Q2, Q3, or Q4',
             ], JSON_PRETTY_PRINT);
         }
-        
+
         $page = max(1, $page); // Ensure page is at least 1
         $offset = ($page - 1) * $perPage;
-        
+
         $records = $this->pwdModel->getByQuarterAndYear($quarter, $year, $perPage, $offset);
-        
+
         // Get quarterly statistics
         $stats = $this->pwdModel->getQuarterlyStatistics($quarter, $year);
-        
+
         return json_encode([
             'status' => 'success',
             'data' => $records,
@@ -360,14 +423,14 @@ class PwdRecordsController
     {
         $page = max(1, $page); // Ensure page is at least 1
         $offset = ($page - 1) * $perPage;
-        
+
         $records = $this->pwdModel->getByDisabilityCategory($categoryId, $perPage, $offset);
-        
+
         $categoryName = '';
         if (!empty($records)) {
             $categoryName = $records[0]['disability_category'] ?? '';
         }
-        
+
         return json_encode([
             'status' => 'success',
             'data' => $records,
@@ -391,14 +454,14 @@ class PwdRecordsController
     {
         $page = max(1, $page); // Ensure page is at least 1
         $offset = ($page - 1) * $perPage;
-        
+
         $records = $this->pwdModel->getByCommunity($communityId, $perPage, $offset);
-        
+
         $communityName = '';
         if (!empty($records)) {
             $communityName = $records[0]['community_name'] ?? '';
         }
-        
+
         return json_encode([
             'status' => 'success',
             'data' => $records,

@@ -1,12 +1,12 @@
 <?php
-declare(strict_types=1);
+// declare(strict_types=0);
 require_once BASE . 'vendor/autoload.php';
+use App\Middleware\LogsViewerAuthMiddleware;
 use Slim\Routing\RouteCollectorProxy;
 
 require_once CONTROLLER . "LogsViewerController.php";
 require_once MIDDLEWARE . "LogsViewerAuthMiddleware.php";
-use LogsViewerController;
-use LogsViewerAuthMiddleware;
+$logsAuth = new LogsViewerAuthMiddleware();
 
 return function ($app): void {
         // Authentication endpoint
@@ -16,8 +16,7 @@ return function ($app): void {
         $app->get('', LogsViewerController::class . ':renderInterface');
 
         // API endpoints - require authentication
-        $app->get('/logs-viewer/directories', LogsViewerController::class . ':listLogDirectories')->add(new LogsViewerAuthMiddleware());
-        $app->get('/logs-viewer/directories/{directory}/files', LogsViewerController::class . ':listLogFiles')->add(new LogsViewerAuthMiddleware());
-        $app->get('/logs-viewer/directories/{directory}/files/{file}', LogsViewerController::class . ':viewLogFile')->add(new LogsViewerAuthMiddleware());
- 
+        $app->get('/logs-viewer/directories', LogsViewerController::class . ':listLogDirectories')->add($logsAuth);
+        $app->get('/logs-viewer/directories/{directory}/files', LogsViewerController::class . ':listLogFiles')->add($logsAuth);
+        $app->get('/logs-viewer/directories/{directory}/files/{file}', LogsViewerController::class . ':viewLogFile')->add($logsAuth);
 };
