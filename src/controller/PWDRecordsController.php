@@ -84,20 +84,20 @@ class PwdRecordsController
      */
     public function createPwdRecord(array $data): string
     {
-        // Validate required fields
-        $requiredFields = ['quarter', 'year', 'gender_id', 'full_name', 'disability_category_id', 'disability_type_id', 'community_id'];
-        $missingFields = [];
-        foreach ($requiredFields as $field) {
-            if (empty($data[$field])) {
-                $missingFields[] = $field;
-            }
-        }
-        if (!empty($missingFields)) {
-            return json_encode([
-                'status' => 'error',
-                'message' => 'Missing required fields: ' . implode(', ', $missingFields),
-            ], JSON_PRETTY_PRINT);
-        }
+        // // Validate required fields
+        // $requiredFields = ['quarter', 'year', 'gender_id', 'full_name', 'disability_category_id', 'disability_type_id', 'community_id'];
+        // $missingFields = [];
+        // foreach ($requiredFields as $field) {
+        //     if (empty($data[$field])) {
+        //         $missingFields[] = $field;
+        //     }
+        // }
+        // if (!empty($missingFields)) {
+        //     return json_encode([
+        //         'status' => 'error',
+        //         'message' => 'Missing required fields: ' . implode(', ', $missingFields),
+        //     ], JSON_PRETTY_PRINT);
+        // }
 
         // Handle file uploads
         $uploadDir = __DIR__ . '/../../public/uploads/pwd/';
