@@ -4,8 +4,14 @@ POST http://localhost:8080/v1/users/login
 Content-Type: application/json
 
 {
-    "username":"joshua1",
+    "username":"joshua 1",
     "password":"1234"
 }
 
 ### Response
+
+
+###
+GET http://localhost:8080/v1/pwd-records
+
+###

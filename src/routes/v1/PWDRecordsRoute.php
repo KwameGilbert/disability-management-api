@@ -9,7 +9,7 @@ declare(strict_types=1);
  * PWD records table has complex relationships with multiple other tables
  */
 
-require_once CONTROLLER . 'PwdRecordsController.php';
+require_once CONTROLLER . 'PWDRecordsController.php';
 
 return function ($app): void {
     $pwdRecordsController = new PwdRecordsController();
