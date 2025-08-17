@@ -258,8 +258,8 @@ class Users
                 return null;
             }
 
-            $stmt = $this->db->prepare("SELECT * FROM {$this->tableName} WHERE username = :ue OR email = :ue LIMIT 1");
-            if (!$this->executeQuery($stmt, ['ue' => $usernameOrEmail])) {
+            $stmt = $this->db->prepare("SELECT * FROM {$this->tableName} WHERE username = :username OR email = :email LIMIT 1");
+            if (!$this->executeQuery($stmt, ['username' => $usernameOrEmail, 'email' => $usernameOrEmail])) {
                 $this->lastError = 'Database error during login';
                 return null;
             }

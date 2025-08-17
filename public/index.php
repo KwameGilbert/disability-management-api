@@ -49,7 +49,7 @@ $errorHandler = new ErrorHandler(
 
 // Configure error middleware with custom handler
 $errorMiddleware = $app->addErrorMiddleware(
-    displayErrorDetails: $environment === 'development',
+    displayErrorDetails: $environment === 'production',
     logErrors: true,
     logErrorDetails: $environment === 'development',
     logger: $container->get('logger')
