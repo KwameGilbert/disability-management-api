@@ -20,7 +20,6 @@ Based on the API documentation, I'll outline the necessary pages, interfaces, an
 - Charts showing assistance requests by type and status
 - Recent activity feed (new registrations, status changes)
 - Quick access links to common actions (add PWD, review requests)
-2. PWD Management
 ## 2. PWD Management
 ### 2.1. View All PWDs
 **Purpose:** List and filter all PWD records
@@ -40,252 +39,236 @@ Based on the API documentation, I'll outline the necessary pages, interfaces, an
 - Sort options (date added, name, status)
 - Bulk actions (approve, export to CSV)
 - Action buttons (view, edit, delete)
-Purpose: Register new PWDs in the system
 
-Pages/Interfaces:
+### 2.2. Add New PWD
+**Purpose:** Register new PWDs in the system
 
-PWD Registration Form
-API Endpoints:
+#### Pages/Interfaces:
+- PWD Registration Form
 
-GET /v1/communities - To populate community dropdown
-GET /v1/disability-categories - To populate categories dropdown
-GET /v1/disability-types/category/{categoryId} - To populate types dropdown when category is selected
-GET /v1/assistance-types - To populate assistance types dropdown
-POST /v1/pwd-records - Submit PWD registration
-Key Components:
+#### API Endpoints:
+- `GET /v1/communities` - To populate community dropdown
+- `GET /v1/disability-categories` - To populate categories dropdown
+- `GET /v1/disability-types/category/{categoryId}` - To populate types dropdown when category is selected
+- `GET /v1/assistance-types` - To populate assistance types dropdown
+- `POST /v1/pwd-records` - Submit PWD registration
 
-Multi-step form with sections:
-Personal Information (name, DOB, gender, contact)
-Disability Information (category, type, supporting documents)
-Location & Guardian Information (community, guardian details)
-Education & Assistance Needs
-2.3. View PWD Profile
-Purpose: Display complete information about a specific PWD
+#### Key Components:
+- Multi-step form with sections:
+  1. Personal Information (name, DOB, gender, contact)
+  2. Disability Information (category, type, supporting documents)
+  3. Location & Guardian Information (community, guardian details)
+  4. Education & Assistance Needs
+### 2.3. View PWD Profile
+**Purpose:** Display complete information about a specific PWD
 
-Pages/Interfaces:
+#### Pages/Interfaces:
+- PWD Profile Page
 
-PWD Profile Page
-API Endpoints:
+#### API Endpoints:
+- `GET /v1/pwd-records/{id}` - Get PWD details
+- `GET /v1/assistance-requests/beneficiary/{beneficiaryId}` - Get assistance history
+- `PATCH /v1/pwd-records/{id}/status` - Update PWD status
 
-GET /v1/pwd-records/{id} - Get PWD details
-GET /v1/assistance-requests/beneficiary/{beneficiaryId} - Get assistance history
-PATCH /v1/pwd-records/{id}/status - Update PWD status
-Key Components:
+#### Key Components:
+- Personal information section
+- Disability details section
+- Guardian information
+- Status indicator (pending, approved, declined)
+- Status update buttons (approve/decline) for pending PWDs
+- Assistance history tab/section
+- Action buttons (edit, delete, request assistance)
 
-Personal information section
-Disability details section
-Guardian information
-Status indicator (pending, approved, declined)
-Status update buttons (approve/decline) for pending PWDs
-Assistance history tab/section
-Action buttons (edit, delete, request assistance)
-2.4. Edit PWD
-Purpose: Update PWD information
+### 2.4. Edit PWD
+**Purpose:** Update PWD information
 
-Pages/Interfaces:
+#### Pages/Interfaces:
+- PWD Edit Form (similar to registration form, but pre-filled)
 
-PWD Edit Form (similar to registration form, but pre-filled)
-API Endpoints:
+#### API Endpoints:
+- Same as Add New PWD, plus:
+- `PATCH /v1/pwd-records/{id}` - Update PWD information
+## 3. Assistance Request Management
+### 3.1. View All Assistance Requests
+**Purpose:** List and filter all assistance requests
 
-Same as Add New PWD, plus:
-PATCH /v1/pwd-records/{id} - Update PWD information
+#### Pages/Interfaces:
+- Assistance Requests List View
 
-3. Assistance Request Management
-3.1. View All Assistance Requests
-Purpose: List and filter all assistance requests
+#### API Endpoints:
+- `GET /v1/assistance-requests` - List all requests (with pagination and filters)
+- `GET /v1/assistance-requests/status/{status}` - Filter by status
+- `GET /v1/assistance-requests/my-requests` - For officer to see their own requests
 
-Pages/Interfaces:
+#### Key Components:
+- Search bar for finding requests
+- Status filters (pending, review, ready for assessment, assessed, declined)
+- Sort options (date, status, name)
+- Action buttons based on request status
+### 3.2. Create Assistance Request
+**Purpose:** Submit new assistance request for a PWD
 
-Assistance Requests List View
-API Endpoints:
+#### Pages/Interfaces:
+- Assistance Request Form
 
-GET /v1/assistance-requests - List all requests (with pagination and filters)
-GET /v1/assistance-requests/status/{status} - Filter by status
-GET /v1/assistance-requests/my-requests - For officer to see their own requests
-Key Components:
+#### API Endpoints:
+- `GET /v1/pwd-records` (with search) - To select beneficiary
+- `GET /v1/assistance-types` - To populate assistance types dropdown
+- `POST /v1/assistance-requests` - Submit assistance request
 
-Search bar for finding requests
-Status filters (pending, review, ready for assessment, assessed, declined)
-Sort options (date, status, name)
-Action buttons based on request status
-3.2. Create Assistance Request
-Purpose: Submit new assistance request for a PWD
+#### Key Components:
+- PWD beneficiary selector (search by name/ID)
+- Assistance type dropdown
+- Description field
+- Amount/value/cost field
+- Supporting documentation upload
+### 3.3. View Assistance Request Details
+**Purpose:** Display complete information about a specific request
 
-Pages/Interfaces:
+#### Pages/Interfaces:
+- Assistance Request Detail Page
 
-Assistance Request Form
-API Endpoints:
+#### API Endpoints:
+- `GET /v1/assistance-requests/{id}` - Get request details
+- `PATCH /v1/assistance-requests/{id}/status` - Update request status
 
-GET /v1/pwd-records (with search) - To select beneficiary
-GET /v1/assistance-types - To populate assistance types dropdown
-POST /v1/assistance-requests - Submit assistance request
-Key Components:
+#### Key Components:
+- Request information (type, amount, description)
+- Beneficiary information (with link to PWD profile)
+- Status history
+- Admin notes section
+- Action buttons based on current status:
+  - For pending: Move to review
+  - For review: Mark as ready for assessment/decline
+  - For ready for assessment: Mark as assessed/decline
+- Notes field for status updates
+### 3.4. Edit Assistance Request
+**Purpose:** Update assistance request details
 
-PWD beneficiary selector (search by name/ID)
-Assistance type dropdown
-Description field
-Amount/value/cost field
-Supporting documentation upload
-3.3. View Assistance Request Details
-Purpose: Display complete information about a specific request
+#### Pages/Interfaces:
+- Assistance Request Edit Form
 
-Pages/Interfaces:
+#### API Endpoints:
+- `PATCH /v1/assistance-requests/{id}` - Update request details
+## 4. Configuration & Settings
+### 4.1. Manage Communities
+#### Pages/Interfaces:
+- Communities List View
+- Add/Edit Community Form
 
-Assistance Request Detail Page
-API Endpoints:
+#### API Endpoints:
+- `GET /v1/communities` - List communities
+- `POST /v1/communities` - Create community
+- `PATCH /v1/communities/{id}` - Update community
+- `DELETE /v1/communities/{id}` - Delete community
+### 4.2. Manage Disability Categories
+#### Pages/Interfaces:
+- Categories List View
+- Add/Edit Category Form
 
-GET /v1/assistance-requests/{id} - Get request details
-PATCH /v1/assistance-requests/{id}/status - Update request status
-Key Components:
+#### API Endpoints:
+- `GET /v1/disability-categories` - List categories
+- `POST /v1/disability-categories` - Create category
+- `PATCH /v1/disability-categories/{id}` - Update category
+- `DELETE /v1/disability-categories/{id}` - Delete category
+### 4.3. Manage Disability Types
+#### Pages/Interfaces:
+- Types List View
+- Add/Edit Type Form
 
-Request information (type, amount, description)
-Beneficiary information (with link to PWD profile)
-Status history
-Admin notes section
-Action buttons based on current status:
-For pending: Move to review
-For review: Mark as ready for assessment/decline
-For ready for assessment: Mark as assessed/decline
-Notes field for status updates
-3.4. Edit Assistance Request
-Purpose: Update assistance request details
+#### API Endpoints:
+- `GET /v1/disability-types` - List types
+- `GET /v1/disability-categories` - For category dropdown
+- `POST /v1/disability-types` - Create type
+- `PATCH /v1/disability-types/{id}` - Update type
+- `DELETE /v1/disability-types/{id}` - Delete type
+### 4.4. Manage Assistance Types
+#### Pages/Interfaces:
+- Assistance Types List View
+- Add/Edit Assistance Type Form
 
-Pages/Interfaces:
+#### API Endpoints:
+- `GET /v1/assistance-types` - List assistance types
+- `POST /v1/assistance-types` - Create assistance type
+- `PATCH /v1/assistance-types/{id}` - Update assistance type
+- `DELETE /v1/assistance-types/{id}` - Delete assistance type
+### 4.5. User Management
+#### Pages/Interfaces:
+- Users List View
+- Add/Edit User Form
 
-Assistance Request Edit Form
-API Endpoints:
+#### API Endpoints:
+- `GET /v1/users` - List users
+- `POST /v1/users` - Create user
+- `PATCH /v1/users/{id}` - Update user
+- `DELETE /v1/users/{id}` - Delete user
+## 5. Reports
+### 5.1. Quarterly Statistics Report
+#### Pages/Interfaces:
+- Quarterly Statistics Report View
 
-PATCH /v1/assistance-requests/{id} - Update request details
-4. Configuration & Settings
-4.1. Manage Communities
-Pages/Interfaces:
+#### API Endpoints:
+- `GET /v1/statistics` - All statistics
+- `GET /v1/statistics/{quarter}/{year}` - Quarter-specific statistics
+- `GET /v1/statistics/compare` - Comparative statistics
 
-Communities List View
-Add/Edit Community Form
-API Endpoints:
+#### Key Components:
+- Quarter selector
+- Year selector
+- Comparison options
+- Export to PDF/Excel functionality
+- Visual charts and data tables
+### 5.2. PWD Distribution Report
+#### Pages/Interfaces:
+- PWD Distribution Report View
 
-GET /v1/communities - List communities
-POST /v1/communities - Create community
-PATCH /v1/communities/{id} - Update community
-DELETE /v1/communities/{id} - Delete community
-4.2. Manage Disability Categories
-Pages/Interfaces:
+#### API Endpoints:
+- `GET /v1/pwd-records` (with various filters)
 
-Categories List View
-Add/Edit Category Form
-API Endpoints:
+#### Key Components:
+- Distribution by disability category/type
+- Distribution by community
+- Age distribution
+- Gender distribution
+- Export functionality
+### 5.3. Assistance Delivery Report
+#### Pages/Interfaces:
+- Assistance Delivery Report View
 
-GET /v1/disability-categories - List categories
-POST /v1/disability-categories - Create category
-PATCH /v1/disability-categories/{id} - Update category
-DELETE /v1/disability-categories/{id} - Delete category
-4.3. Manage Disability Types
-Pages/Interfaces:
+#### API Endpoints:
+- `GET /v1/assistance-requests` (with various filters)
 
-Types List View
-Add/Edit Type Form
-API Endpoints:
+#### Key Components:
+- Assistance by type
+- Assistance by status
+- Total value/cost metrics
+- Time-to-delivery metrics
+- Export functionality
+## 6. Authentication & User Profile
+### 6.1. Login
+#### Pages/Interfaces:
+- Login Form
 
-GET /v1/disability-types - List types
-GET /v1/disability-categories - For category dropdown
-POST /v1/disability-types - Create type
-PATCH /v1/disability-types/{id} - Update type
-DELETE /v1/disability-types/{id} - Delete type
-4.4. Manage Assistance Types
-Pages/Interfaces:
+#### API Endpoints:
+- `POST /v1/users/login` - Authenticate user
+### 6.2. Password Management
+#### Pages/Interfaces:
+- Forgot Password Form
+- Reset Password Form
+- Update Password Form
 
-Assistance Types List View
-Add/Edit Assistance Type Form
-API Endpoints:
+#### API Endpoints:
+- `POST /v1/users/password/request-reset` - Request password reset
+- `POST /v1/users/password/verify-otp` - Verify OTP
+- `POST /v1/users/password/reset` - Reset password
+- `POST /v1/users/password/update` - Update password
+### 6.3. User Profile
+#### Pages/Interfaces:
+- User Profile View/Edit
 
-GET /v1/assistance-types - List assistance types
-POST /v1/assistance-types - Create assistance type
-PATCH /v1/assistance-types/{id} - Update assistance type
-DELETE /v1/assistance-types/{id} - Delete assistance type
-4.5. User Management
-Pages/Interfaces:
-
-Users List View
-Add/Edit User Form
-API Endpoints:
-
-GET /v1/users - List users
-POST /v1/users - Create user
-PATCH /v1/users/{id} - Update user
-DELETE /v1/users/{id} - Delete user
-5. Reports
-5.1. Quarterly Statistics Report
-Pages/Interfaces:
-
-Quarterly Statistics Report View
-API Endpoints:
-
-GET /v1/statistics - All statistics
-GET /v1/statistics/quarterly/{quarter}/{year} - Quarter-specific statistics
-GET /v1/statistics/compare - Comparative statistics
-Key Components:
-
-Quarter selector
-Year selector
-Comparison options
-Export to PDF/Excel functionality
-Visual charts and data tables
-5.2. PWD Distribution Report
-Pages/Interfaces:
-
-PWD Distribution Report View
-API Endpoints:
-
-GET /v1/pwd-records (with various filters)
-Key Components:
-
-Distribution by disability category/type
-Distribution by community
-Age distribution
-Gender distribution
-Export functionality
-5.3. Assistance Delivery Report
-Pages/Interfaces:
-
-Assistance Delivery Report View
-API Endpoints:
-
-GET /v1/assistance-requests (with various filters)
-Key Components:
-
-Assistance by type
-Assistance by status
-Total value/cost metrics
-Time-to-delivery metrics
-Export functionality
-6. Authentication & User Profile
-6.1. Login
-Pages/Interfaces:
-
-Login Form
-API Endpoints:
-
-POST /v1/users/login - Authenticate user
-6.2. Password Management
-Pages/Interfaces:
-
-Forgot Password Form
-Reset Password Form
-Update Password Form
-API Endpoints:
-
-POST /v1/users/password/request-reset - Request password reset
-POST /v1/users/password/verify-otp - Verify OTP
-POST /v1/users/password/reset - Reset password
-POST /v1/users/password/update - Update password
-6.3. User Profile
-Pages/Interfaces:
-
-User Profile View/Edit
-API Endpoints:
-
-GET /v1/users/{id} - Get user profile
-PATCH /v1/users/{id} - Update user profile
+#### API Endpoints:
+- `GET /v1/users/{id}` - Get user profile
+- `PATCH /v1/users/{id}` - Update user profile
 7. Complete Workflow Sequence
 PWD Registration & Approval Workflow:
 ## 7. Complete Workflow Sequence
