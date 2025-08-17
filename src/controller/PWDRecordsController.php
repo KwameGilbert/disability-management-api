@@ -169,7 +169,7 @@ class PwdRecordsController
                 'message' => 'Failed to create PWD record: ' . $this->pwdModel->getLastError(),
             ], JSON_PRETTY_PRINT);
         }
-        $userId = $data['user_id'];
+        $userId = (int) $data['user_id'];
         // Log the activity
         $this->logModel->logActivity($userId, "Created new PWD record with ID {$pwdId} for {$data['full_name']}");
 
