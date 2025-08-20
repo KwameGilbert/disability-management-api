@@ -43,7 +43,7 @@ return function ($app): void {
     });
 
     // Create a new assistance request
-    // Expects: {"assistance_type_id":1, "beneficiary_id":1, "description":"...", "amount_value_cost":123.45}
+    // Expects: {"assistance_type_id":1, "beneficiary_id":1, "description":"...", "amount_value_cost":123.45, "user_id":1}
     $app->post('/v1/assistance-requests', function ($request, $response) use ($assistanceRequestsController) {
         // Get authenticated user from JWT token or session
         $data = json_decode((string) $request->getBody(), true) ?? [];
