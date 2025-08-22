@@ -1459,7 +1459,8 @@ Creates a new assistance request.
   "assistance_type_id": 1,
   "beneficiary_id": 1,
   "description": "Financial support for medical treatment",
-  "amount_value_cost": 1000.00
+  "amount_value_cost": 1000.00,
+  "user_id": 1
 }
 ```
 
