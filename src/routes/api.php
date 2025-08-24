@@ -13,7 +13,7 @@ return function ($app): void {
         '/v1/disability-categories' =>  '/v1/DisabilityCategoriesRoute.php',
         '/v1/disability-types' =>  '/v1/DisabilityTypesRoute.php',
         '/v1/assistance-types' =>  '/v1/AssistanceTypesRoute.php',
-        '/v1/assistance-requests' =>  '/v1/AssistanceRequestSRoute.php',
+        '/v1/assistance-requests' =>  '/v1/AssistanceRequestsRoute.php',
         '/v1/logs' =>  '/v1/ActivityLogsRoute.php',
         '/logs-viewer' =>  '/v1/LogsViewerRoute.php',
         
