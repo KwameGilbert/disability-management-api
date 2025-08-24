@@ -45,18 +45,15 @@ return function ($app): void {
     // Create a new assistance request
     // Expects: {"assistance_type_id":1, "beneficiary_id":1, "description":"...", "amount_value_cost":123.45, "user_id":1}
     $app->post('/v1/assistance-requests', function ($request, $response) use ($assistanceRequestsController) {
-        // Get authenticated user from JWT token or session
         $data = json_decode((string) $request->getBody(), true) ?? [];
-        $userId = $data['user_id'];
+        $userId = $data['user_id'] ?? null;
         if (!$userId) {
             $response->getBody()->write(json_encode([
                 'status' => 'error',
-                'message' => 'Authentication required',
-                ]));
-                return $response->withHeader('Content-Type', 'application/json')
-                ->withStatus(401);
+                'message' => 'user_id is required in the request body',
+            ]));
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(401);
         }
-
         $result = $assistanceRequestsController->createAssistanceRequest($data, $userId);
         $response->getBody()->write($result);
         return $response->withHeader('Content-Type', 'application/json');
@@ -64,40 +61,34 @@ return function ($app): void {
 
     // Update an existing assistance request
     $app->patch('/v1/assistance-requests/{id}', function ($request, $response, $args) use ($assistanceRequestsController) {
-        // Get authenticated user from JWT token or session
-        $userId = $request->getAttribute('user_id') ?? 0;
-
+        $id = isset($args['id']) ? (int) $args['id'] : 0;
+        $data = json_decode((string) $request->getBody(), true) ?? [];
+        $userId = $data['user_id'] ?? null;
         if (!$userId) {
             $response->getBody()->write(json_encode([
                 'status' => 'error',
-                'message' => 'Authentication required',
+                'message' => 'user_id is required in the request body',
             ]));
-            return $response->withHeader('Content-Type', 'application/json')
-                ->withStatus(401);
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(401);
         }
-
-        $id = isset($args['id']) ? (int) $args['id'] : 0;
-        $data = json_decode((string) $request->getBody(), true) ?? [];
         $result = $assistanceRequestsController->updateAssistanceRequest($id, $data, $userId);
         $response->getBody()->write($result);
         return $response->withHeader('Content-Type', 'application/json');
     });
 
     // Update assistance request status
-    // Expects: {"status":"pending|review|ready_to_access|assessed|declined", "admin_notes":"..."}
+    // Expects: {"status":"pending|review|ready_to_access|assessed|declined", "admin_notes":"...", "user_id":1}
     $app->patch('/v1/assistance-requests/{id}/status', function ($request, $response, $args) use ($assistanceRequestsController) {
-        // Get authenticated user from JWT token or session
-        $userId = $request->getAttribute('user_id') ?? 0;
-
+        $id = isset($args['id']) ? (int) $args['id'] : 0;
+        $data = json_decode((string) $request->getBody(), true) ?? [];
+        $userId = $data['user_id'] ?? null;
         if (!$userId) {
             $response->getBody()->write(json_encode([
                 'status' => 'error',
-                'message' => 'Authentication required',
+                'message' => 'user_id is required in the request body',
             ]));
-            return $response->withHeader('Content-Type', 'application/json')
-                ->withStatus(401);
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(401);
         }
-
         // Check if user is admin - this should be handled by middleware
         $userRole = $request->getAttribute('user_role') ?? '';
         if ($userRole !== 'admin') {
@@ -105,24 +96,16 @@ return function ($app): void {
                 'status' => 'error',
                 'message' => 'Only administrators can update request status',
             ]));
-            return $response->withHeader('Content-Type', 'application/json')
-                ->withStatus(403);
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(403);
         }
-
-        $id = isset($args['id']) ? (int) $args['id'] : 0;
-        $data = json_decode((string) $request->getBody(), true) ?? [];
-
         if (empty($data['status'])) {
             $response->getBody()->write(json_encode([
                 'status' => 'error',
                 'message' => 'Status is required',
             ]));
-            return $response->withHeader('Content-Type', 'application/json')
-                ->withStatus(400);
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
         }
-
         $adminNotes = $data['admin_notes'] ?? null;
-
         $result = $assistanceRequestsController->updateRequestStatus($id, $data['status'], $adminNotes, $userId);
         $response->getBody()->write($result);
         return $response->withHeader('Content-Type', 'application/json');
@@ -130,18 +113,16 @@ return function ($app): void {
 
     // Delete assistance request
     $app->delete('/v1/assistance-requests/{id}', function ($request, $response, $args) use ($assistanceRequestsController) {
-        // Get authenticated user from JWT token or session
-        $userId = $request->getAttribute('user_id') ?? 0;
-
+        $id = isset($args['id']) ? (int) $args['id'] : 0;
+        $data = json_decode((string) $request->getBody(), true) ?? [];
+        $userId = $data['user_id'] ?? null;
         if (!$userId) {
             $response->getBody()->write(json_encode([
                 'status' => 'error',
-                'message' => 'Authentication required',
+                'message' => 'user_id is required in the request body',
             ]));
-            return $response->withHeader('Content-Type', 'application/json')
-                ->withStatus(401);
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(401);
         }
-
         // Check if user is admin - this should be handled by middleware
         $userRole = $request->getAttribute('user_role') ?? '';
         if ($userRole !== 'admin') {
@@ -149,11 +130,8 @@ return function ($app): void {
                 'status' => 'error',
                 'message' => 'Only administrators can delete assistance requests',
             ]));
-            return $response->withHeader('Content-Type', 'application/json')
-                ->withStatus(403);
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(403);
         }
-
-        $id = isset($args['id']) ? (int) $args['id'] : 0;
         $result = $assistanceRequestsController->deleteAssistanceRequest($id, $userId);
         $response->getBody()->write($result);
         return $response->withHeader('Content-Type', 'application/json');
@@ -195,26 +173,4 @@ return function ($app): void {
         return $response->withHeader('Content-Type', 'application/json');
     });
 
-    // Get my assistance requests (for the authenticated user)
-    $app->get('/v1/assistance-requests/my-requests', function ($request, $response) use ($assistanceRequestsController) {
-        // Get authenticated user from JWT token or session
-        $userId = $request->getAttribute('user_id') ?? 0;
-
-        if (!$userId) {
-            $response->getBody()->write(json_encode([
-                'status' => 'error',
-                'message' => 'Authentication required',
-            ]));
-            return $response->withHeader('Content-Type', 'application/json')
-                ->withStatus(401);
-        }
-
-        $queryParams = $request->getQueryParams();
-        $page = isset($queryParams['page']) ? (int) $queryParams['page'] : 1;
-        $perPage = isset($queryParams['per_page']) ? (int) $queryParams['per_page'] : 20;
-
-        $result = $assistanceRequestsController->getRequestsByUser($userId, $page, $perPage);
-        $response->getBody()->write($result);
-        return $response->withHeader('Content-Type', 'application/json');
-    });
 };
