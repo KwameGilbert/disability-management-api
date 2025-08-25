@@ -34,14 +34,22 @@ return function ($app): void {
         return $response->withHeader('Content-Type', 'application/json');
     });
 
-    // Get total number of PWDs
-    $app->get('/v1/pwd-records/total', function ($request, $response) use ($pwdRecordsController){
+    // Get total number of PWDs with quarterly additions and assessed beneficiaries
+    $app->get('/v1/pwd-records/total', function ($request, $response) use ($pwdRecordsController) {
         $queryParams = $request->getQueryParams();
         $results = $pwdRecordsController->getNumberOfPWDs($queryParams);
         $response->getBody()->write($results);
         return $response->withHeader('Content-Type', 'application/json');
     });
-    
+
+    // Get statistics dashboard data (total PWDs, quarterly additions, assessed beneficiaries)
+    $app->get('/v1/pwd-records/statistics', function ($request, $response) use ($pwdRecordsController) {
+        $queryParams = $request->getQueryParams();
+        $results = $pwdRecordsController->getNumberOfPWDs($queryParams);
+        $response->getBody()->write($results);
+        return $response->withHeader('Content-Type', 'application/json');
+    });
+
     // Get PWD record by ID
     $app->get('/v1/pwd-records/{id}', function ($request, $response, $args) use ($pwdRecordsController) {
         $id = isset($args['id']) ? (int) $args['id'] : 0;
@@ -87,7 +95,7 @@ return function ($app): void {
         // Get authenticated user from JWT token or session
         $userId = $data['user_id'];
 
-        if(!$userId) {
+        if (!$userId) {
             $response->getBody()->write(json_encode([
                 'status' => 'error',
                 'message' => 'Authentication required',
@@ -96,7 +104,7 @@ return function ($app): void {
         }
 
         $id = isset($args['id']) ? (int) $args['id'] : 0;
-        
+
         if (empty($data['status'])) {
             $response->getBody()->write(json_encode([
                 'status' => 'error',
