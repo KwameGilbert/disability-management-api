@@ -34,6 +34,14 @@ return function ($app): void {
         return $response->withHeader('Content-Type', 'application/json');
     });
 
+    // Get total number of PWDs
+    $app->get('/v1/pwd-records/total', function ($request, $response) use ($pwdRecordsController){
+        $queryParams = $request->getQueryParams();
+        $results = $pwdRecordsController->getNumberOfPWDs($queryParams);
+        $response->getBody()->write($results);
+        return $response->withHeader('Content-Type', 'application/json');
+    });
+    
     // Get PWD record by ID
     $app->get('/v1/pwd-records/{id}', function ($request, $response, $args) use ($pwdRecordsController) {
         $id = isset($args['id']) ? (int) $args['id'] : 0;

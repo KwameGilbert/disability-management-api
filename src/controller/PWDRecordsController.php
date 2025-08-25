@@ -52,6 +52,22 @@ class PwdRecordsController
         ], JSON_PRETTY_PRINT);
     }
 
+     /**
+     * Get total count of PWD records
+     * 
+     * @param array $filters Optional array of filter conditions
+     * @return int Count of records
+     */
+    public function getNumberOfPWDs(array $filters = []): string{
+        $count = $this->pwdModel->getCount($filters);
+        return json_encode([
+            'status' => 'success',
+            'total_pwd' => $count,
+            'message' => 'Total number of PWDs'
+        ], JSON_PRETTY_PRINT);
+    }
+
+
     /**
      * Get PWD record by ID
      * 
