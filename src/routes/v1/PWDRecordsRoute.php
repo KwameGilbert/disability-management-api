@@ -75,21 +75,20 @@ return function ($app): void {
     // Update PWD record status
     // Expects: {"status":"pending|approved|declined"}
     $app->patch('/v1/pwd-records/{id}/status', function ($request, $response, $args) use ($pwdRecordsController) {
+        $data = json_decode((string) $request->getBody(), true) ?? [];
         // Get authenticated user from JWT token or session
-        $userId = $request->getAttribute('user_id') ?? 0;
+        $userId = $data['user_id'];
 
-        if (!$userId) {
+        if(!$userId) {
             $response->getBody()->write(json_encode([
                 'status' => 'error',
                 'message' => 'Authentication required',
             ]));
-            return $response->withHeader('Content-Type', 'application/json')
-                ->withStatus(401);
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(401);
         }
 
         $id = isset($args['id']) ? (int) $args['id'] : 0;
-        $data = json_decode((string) $request->getBody(), true) ?? [];
-
+        
         if (empty($data['status'])) {
             $response->getBody()->write(json_encode([
                 'status' => 'error',
@@ -106,8 +105,8 @@ return function ($app): void {
 
     // Delete PWD record
     $app->delete('/v1/pwd-records/{id}', function ($request, $response, $args) use ($pwdRecordsController) {
-        // Get authenticated user from JWT token or session
-        $userId = $request->getAttribute('user_id') ?? 0;
+        $data = json_decode((string) $request->getBody(), true) ?? [];
+        $userId = $data['user_id'];
 
         if (!$userId) {
             $response->getBody()->write(json_encode([
