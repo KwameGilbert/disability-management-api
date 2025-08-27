@@ -85,12 +85,15 @@ return function ($app): void {
         if (!$userId) {
             $response->getBody()->write(json_encode([
                 'status' => 'error',
-                'message' => 'user_id is required in the request body',
+                'message' => 'User ID is required in the request body',
             ]));
             return $response->withHeader('Content-Type', 'application/json')->withStatus(401);
         }
         // Check if user is admin - this should be handled by middleware
-        $userRole = $request->getAttribute('user_role') ?? '';
+        require_once CONTROLLER . '/UsersController.php';
+        $usersController = new UsersController();
+        $user = $userController->getUserById($id);
+        $userRole = $user['role'];
         if ($userRole !== 'admin') {
             $response->getBody()->write(json_encode([
                 'status' => 'error',
