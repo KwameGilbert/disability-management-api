@@ -127,11 +127,14 @@ return function ($app): void {
             return $response->withHeader('Content-Type', 'application/json')->withStatus(401);
         }
         // Check if user is admin - this should be handled by middleware
-        $userRole = $request->getAttribute('user_role') ?? '';
+        require_once CONTROLLER . '/UsersController.php';
+        $usersController = new UsersController();
+        $user = $userController->getUserById($id);
+        $userRole = $user['role'];
         if ($userRole !== 'admin') {
             $response->getBody()->write(json_encode([
                 'status' => 'error',
-                'message' => 'Only administrators can delete assistance requests',
+                'message' => 'Only administrators can update request status',
             ]));
             return $response->withHeader('Content-Type', 'application/json')->withStatus(403);
         }
