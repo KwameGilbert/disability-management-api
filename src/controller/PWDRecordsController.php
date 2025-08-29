@@ -53,6 +53,40 @@ class PwdRecordsController
     }
 
     /**
+     * Get total count of PWD records
+     * 
+     * @param array $filters Optional array of filter conditions
+     * @return int Count of records
+     */
+    public function getNumberOfPWDs(array $filters = []): string
+    {
+        $count = $this->pwdModel->getCount($filters);
+
+        // Get current quarter and year
+        $currentQuarter = 'Q' . ceil(date('n') / 3);
+        $currentYear = (int) date('Y');
+
+        // Get quarterly additions
+        $quarterlyAdditions = $this->pwdModel->getCurrentQuarterAdditions($currentQuarter, $currentYear);
+
+        // Get total assessed beneficiaries
+        $assessedBeneficiaries = $this->pwdModel->getTotalAssessedBeneficiaries();
+
+        return json_encode([
+            'status' => 'success',
+            'total_pwd' => $count,
+            'current_quarter_additions' => $quarterlyAdditions,
+            'total_assessed_beneficiaries' => $assessedBeneficiaries,
+            'current_period' => [
+                'quarter' => $currentQuarter,
+                'year' => $currentYear
+            ],
+            'message' => 'PWD statistics'
+        ], JSON_PRETTY_PRINT);
+    }
+
+
+    /**
      * Get PWD record by ID
      * 
      * @param int $id PWD record ID to retrieve
@@ -398,6 +432,16 @@ class PwdRecordsController
 
         // Get quarterly statistics
         $stats = $this->pwdModel->getQuarterlyStatistics($quarter, $year);
+
+        // Get current quarter additions
+        $quarterlyAdditions = $this->pwdModel->getCurrentQuarterAdditions($quarter, $year);
+
+        // Get total assessed beneficiaries
+        $assessedBeneficiaries = $this->pwdModel->getTotalAssessedBeneficiaries();
+
+        // Add these to stats
+        $stats['current_quarter_additions'] = $quarterlyAdditions;
+        $stats['total_assessed_beneficiaries'] = $assessedBeneficiaries;
 
         return json_encode([
             'status' => 'success',

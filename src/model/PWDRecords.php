@@ -91,10 +91,10 @@ class PwdRecords
                       LEFT JOIN disability_categories dc ON p.disability_category_id = dc.category_id
                       LEFT JOIN disability_types dt ON p.disability_type_id = dt.type_id
                       LEFT JOIN assistance_types at ON p.assistance_type_needed_id = at.assistance_type_id";
-            
+
             $whereConditions = [];
             $params = [];
-            
+
             // Apply filters if provided
             if (!empty($filters)) {
                 foreach ($filters as $column => $value) {
@@ -110,38 +110,38 @@ class PwdRecords
                     }
                 }
             }
-            
+
             if (!empty($whereConditions)) {
                 $query .= " WHERE " . implode(' AND ', $whereConditions);
             }
-            
+
             $query .= " ORDER BY p.created_at DESC LIMIT :limit OFFSET :offset";
-            
+
             $stmt = $this->db->prepare($query);
-            
+
             // Bind limit and offset params
             $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
             $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
-            
+
             // Bind filter params if any
             foreach ($params as $param => $value) {
                 $stmt->bindValue(":{$param}", $value);
             }
-            
+
             if (!$stmt->execute()) {
                 $this->lastError = "Error executing query: " . implode(" ", $stmt->errorInfo());
                 return [];
             }
-            
+
             $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
+
             // Process any JSON fields
             foreach ($records as &$record) {
                 if (isset($record['supporting_documents']) && !empty($record['supporting_documents'])) {
                     $record['supporting_documents'] = json_decode($record['supporting_documents'], true);
                 }
             }
-            
+
             return $records;
         } catch (PDOException $e) {
             $this->lastError = "Error fetching PWD records: " . $e->getMessage();
@@ -159,10 +159,10 @@ class PwdRecords
     {
         try {
             $query = "SELECT COUNT(*) as count FROM {$this->tableName} p";
-            
+
             $whereConditions = [];
             $params = [];
-            
+
             // Apply filters if provided
             if (!empty($filters)) {
                 foreach ($filters as $column => $value) {
@@ -178,23 +178,23 @@ class PwdRecords
                     }
                 }
             }
-            
+
             if (!empty($whereConditions)) {
                 $query .= " WHERE " . implode(' AND ', $whereConditions);
             }
-            
+
             $stmt = $this->db->prepare($query);
-            
+
             // Bind filter params if any
             foreach ($params as $param => $value) {
                 $stmt->bindValue(":{$param}", $value);
             }
-            
+
             if (!$stmt->execute()) {
                 $this->lastError = "Error executing count query: " . implode(" ", $stmt->errorInfo());
                 return 0;
             }
-            
+
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             return (int)($result['count'] ?? 0);
         } catch (PDOException $e) {
@@ -228,23 +228,23 @@ class PwdRecords
                       LEFT JOIN disability_types dt ON p.disability_type_id = dt.type_id
                       LEFT JOIN assistance_types at ON p.assistance_type_needed_id = at.assistance_type_id
                       WHERE p.pwd_id = :pwd_id";
-            
+
             $stmt = $this->db->prepare($query);
-            
+
             if (!$this->executeQuery($stmt, ['pwd_id' => $pwdId])) {
                 return null;
             }
-            
+
             $record = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$record) {
                 return null;
             }
-            
+
             // Process JSON fields
             if (isset($record['supporting_documents']) && !empty($record['supporting_documents'])) {
                 $record['supporting_documents'] = json_decode($record['supporting_documents'], true);
             }
-            
+
             return $record;
         } catch (PDOException $e) {
             $this->lastError = "Error fetching PWD record: " . $e->getMessage();
@@ -265,28 +265,47 @@ class PwdRecords
             if (isset($data['supporting_documents']) && is_array($data['supporting_documents'])) {
                 $data['supporting_documents'] = json_encode($data['supporting_documents']);
             }
-            
+
             // Calculate age from DOB if provided and age is not set
             if (!empty($data['dob']) && empty($data['age'])) {
                 $dob = new \DateTime($data['dob']);
                 $now = new \DateTime();
                 $data['age'] = (int) $now->diff($dob)->y;
             }
-            
+
             // Prepare query dynamically based on available fields
             $columns = [];
             $placeholders = [];
             $params = [];
-            
+
             $allowedFields = [
-                'user_id', 'quarter', 'year', 'gender_id', 'full_name', 'occupation',
-                'contact', 'dob', 'age', 'disability_category_id', 'disability_type_id',
-                'gh_card_number', 'nhis_number', 'community_id', 'guardian_name',
-                'guardian_occupation', 'guardian_phone', 'guardian_relationship',
-                'education_level', 'school_name', 'assistance_type_needed_id',
-                'support_needs', 'supporting_documents', 'status', 'profile_image'
+                'user_id',
+                'quarter',
+                'year',
+                'gender_id',
+                'full_name',
+                'occupation',
+                'contact',
+                'dob',
+                'age',
+                'disability_category_id',
+                'disability_type_id',
+                'gh_card_number',
+                'nhis_number',
+                'community_id',
+                'guardian_name',
+                'guardian_occupation',
+                'guardian_phone',
+                'guardian_relationship',
+                'education_level',
+                'school_name',
+                'assistance_type_needed_id',
+                'support_needs',
+                'supporting_documents',
+                'status',
+                'profile_image'
             ];
-            
+
             foreach ($allowedFields as $field) {
                 if (array_key_exists($field, $data)) {
                     $columns[] = $field;
@@ -294,21 +313,21 @@ class PwdRecords
                     $params[$field] = $data[$field];
                 }
             }
-            
+
             $query = "INSERT INTO {$this->tableName} (" . implode(", ", $columns) . ") 
                       VALUES (" . implode(", ", $placeholders) . ")";
-            
+
             $stmt = $this->db->prepare($query);
-            
+
             foreach ($params as $param => $value) {
                 $stmt->bindValue(":{$param}", $value);
             }
-            
+
             if (!$stmt->execute()) {
                 $this->lastError = "Error executing insert: " . implode(" ", $stmt->errorInfo());
                 return false;
             }
-            
+
             return (int) $this->db->lastInsertId();
         } catch (PDOException $e) {
             $this->lastError = "Error creating PWD record: " . $e->getMessage();
@@ -330,47 +349,66 @@ class PwdRecords
             if (isset($data['supporting_documents']) && is_array($data['supporting_documents'])) {
                 $data['supporting_documents'] = json_encode($data['supporting_documents']);
             }
-            
+
             // Calculate age from DOB if DOB is provided and age is not set
             if (!empty($data['dob']) && empty($data['age'])) {
                 $dob = new \DateTime($data['dob']);
                 $now = new \DateTime();
                 $data['age'] = (int) $now->diff($dob)->y;
             }
-            
+
             // Prepare query dynamically based on available fields
             $setStatements = [];
             $params = ['pwd_id' => $pwdId];
-            
+
             $allowedFields = [
-                'user_id', 'quarter', 'year', 'gender_id', 'full_name', 'occupation',
-                'contact', 'dob', 'age', 'disability_category_id', 'disability_type_id',
-                'gh_card_number', 'nhis_number', 'community_id', 'guardian_name',
-                'guardian_occupation', 'guardian_phone', 'guardian_relationship',
-                'education_level', 'school_name', 'assistance_type_needed_id',
-                'support_needs', 'supporting_documents', 'status', 'profile_image'
+                'user_id',
+                'quarter',
+                'year',
+                'gender_id',
+                'full_name',
+                'occupation',
+                'contact',
+                'dob',
+                'age',
+                'disability_category_id',
+                'disability_type_id',
+                'gh_card_number',
+                'nhis_number',
+                'community_id',
+                'guardian_name',
+                'guardian_occupation',
+                'guardian_phone',
+                'guardian_relationship',
+                'education_level',
+                'school_name',
+                'assistance_type_needed_id',
+                'support_needs',
+                'supporting_documents',
+                'status',
+                'profile_image'
             ];
-            
+
             foreach ($allowedFields as $field) {
                 if (array_key_exists($field, $data)) {
                     $setStatements[] = "{$field} = :{$field}";
                     $params[$field] = $data[$field];
                 }
             }
-            
+
             if (empty($setStatements)) {
                 return true; // Nothing to update
             }
-            
+
             $query = "UPDATE {$this->tableName} SET " . implode(", ", $setStatements) . " 
                       WHERE pwd_id = :pwd_id";
-            
+
             $stmt = $this->db->prepare($query);
-            
+
             foreach ($params as $param => $value) {
                 $stmt->bindValue(":{$param}", $value);
             }
-            
+
             return $stmt->execute();
         } catch (PDOException $e) {
             $this->lastError = "Error updating PWD record: " . $e->getMessage();
@@ -390,25 +428,25 @@ class PwdRecords
             // Check if there are any assistance requests for this PWD
             $checkQuery = "SELECT COUNT(*) as count FROM assistance_requests 
                           WHERE beneficiary_id = :pwd_id";
-            
+
             $checkStmt = $this->db->prepare($checkQuery);
-            
+
             if (!$this->executeQuery($checkStmt, ['pwd_id' => $pwdId])) {
                 return false;
             }
-            
+
             $result = $checkStmt->fetch(PDO::FETCH_ASSOC);
             $count = (int)($result['count'] ?? 0);
-            
+
             if ($count > 0) {
                 $this->lastError = "Cannot delete PWD record because it has {$count} assistance requests. Delete those first.";
                 return false;
             }
-            
+
             // If no assistance requests, delete the PWD record
             $query = "DELETE FROM {$this->tableName} WHERE pwd_id = :pwd_id";
             $stmt = $this->db->prepare($query);
-            
+
             return $this->executeQuery($stmt, ['pwd_id' => $pwdId]);
         } catch (PDOException $e) {
             $this->lastError = "Error deleting PWD record: " . $e->getMessage();
@@ -430,12 +468,12 @@ class PwdRecords
                 $this->lastError = "Invalid status value: {$status}";
                 return false;
             }
-            
+
             $query = "UPDATE {$this->tableName} SET status = :status 
                       WHERE pwd_id = :pwd_id";
-            
+
             $stmt = $this->db->prepare($query);
-            
+
             return $this->executeQuery($stmt, [
                 'status' => $status,
                 'pwd_id' => $pwdId
@@ -476,28 +514,28 @@ class PwdRecords
                       WHERE p.quarter = :quarter AND p.year = :year
                       ORDER BY p.created_at DESC
                       LIMIT :limit OFFSET :offset";
-            
+
             $stmt = $this->db->prepare($query);
-            
+
             $stmt->bindParam(':quarter', $quarter);
             $stmt->bindParam(':year', $year, PDO::PARAM_INT);
             $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
             $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
-            
+
             if (!$stmt->execute()) {
                 $this->lastError = "Error executing query: " . implode(" ", $stmt->errorInfo());
                 return [];
             }
-            
+
             $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
+
             // Process any JSON fields
             foreach ($records as &$record) {
                 if (isset($record['supporting_documents']) && !empty($record['supporting_documents'])) {
                     $record['supporting_documents'] = json_decode($record['supporting_documents'], true);
                 }
             }
-            
+
             return $records;
         } catch (PDOException $e) {
             $this->lastError = "Error fetching PWD records by quarter and year: " . $e->getMessage();
@@ -534,27 +572,27 @@ class PwdRecords
                       WHERE p.disability_category_id = :category_id
                       ORDER BY p.created_at DESC
                       LIMIT :limit OFFSET :offset";
-            
+
             $stmt = $this->db->prepare($query);
-            
+
             $stmt->bindParam(':category_id', $categoryId, PDO::PARAM_INT);
             $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
             $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
-            
+
             if (!$stmt->execute()) {
                 $this->lastError = "Error executing query: " . implode(" ", $stmt->errorInfo());
                 return [];
             }
-            
+
             $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
+
             // Process any JSON fields
             foreach ($records as &$record) {
                 if (isset($record['supporting_documents']) && !empty($record['supporting_documents'])) {
                     $record['supporting_documents'] = json_decode($record['supporting_documents'], true);
                 }
             }
-            
+
             return $records;
         } catch (PDOException $e) {
             $this->lastError = "Error fetching PWD records by disability category: " . $e->getMessage();
@@ -591,27 +629,27 @@ class PwdRecords
                       WHERE p.community_id = :community_id
                       ORDER BY p.created_at DESC
                       LIMIT :limit OFFSET :offset";
-            
+
             $stmt = $this->db->prepare($query);
-            
+
             $stmt->bindParam(':community_id', $communityId, PDO::PARAM_INT);
             $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
             $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
-            
+
             if (!$stmt->execute()) {
                 $this->lastError = "Error executing query: " . implode(" ", $stmt->errorInfo());
                 return [];
             }
-            
+
             $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
+
             // Process any JSON fields
             foreach ($records as &$record) {
                 if (isset($record['supporting_documents']) && !empty($record['supporting_documents'])) {
                     $record['supporting_documents'] = json_decode($record['supporting_documents'], true);
                 }
             }
-            
+
             return $records;
         } catch (PDOException $e) {
             $this->lastError = "Error fetching PWD records by community: " . $e->getMessage();
@@ -636,38 +674,38 @@ class PwdRecords
                         SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending
                       FROM {$this->tableName}
                       WHERE quarter = :quarter AND year = :year";
-            
+
             $stmt = $this->db->prepare($query);
-            
+
             $stmt->bindParam(':quarter', $quarter);
             $stmt->bindParam(':year', $year, PDO::PARAM_INT);
-            
+
             if (!$stmt->execute()) {
                 $this->lastError = "Error executing query: " . implode(" ", $stmt->errorInfo());
                 return [];
             }
-            
+
             $stats = $stmt->fetch(PDO::FETCH_ASSOC);
-            
+
             // Add additional statistics
             $query = "SELECT 
                         COUNT(DISTINCT community_id) as communities,
                         COUNT(DISTINCT disability_category_id) as categories
                       FROM {$this->tableName}
                       WHERE quarter = :quarter AND year = :year";
-            
+
             $stmt = $this->db->prepare($query);
-            
+
             $stmt->bindParam(':quarter', $quarter);
             $stmt->bindParam(':year', $year, PDO::PARAM_INT);
-            
+
             if (!$stmt->execute()) {
                 $this->lastError = "Error executing query: " . implode(" ", $stmt->errorInfo());
                 return $stats;
             }
-            
+
             $additionalStats = $stmt->fetch(PDO::FETCH_ASSOC);
-            
+
             return array_merge($stats, $additionalStats);
         } catch (PDOException $e) {
             $this->lastError = "Error fetching quarterly statistics: " . $e->getMessage();
@@ -684,54 +722,54 @@ class PwdRecords
     public function validateForeignKeys(array $data): array
     {
         $errors = [];
-        
+
         // Check user_id exists
         if (isset($data['user_id'])) {
             $query = "SELECT user_id FROM users WHERE user_id = :user_id";
             $stmt = $this->db->prepare($query);
             $stmt->bindParam(':user_id', $data['user_id'], PDO::PARAM_INT);
             $stmt->execute();
-            
+
             if ($stmt->rowCount() === 0) {
                 $errors[] = "User ID {$data['user_id']} does not exist";
             }
         }
-        
+
         // Check gender_id exists
         if (isset($data['gender_id'])) {
             $query = "SELECT gender_id FROM genders WHERE gender_id = :gender_id";
             $stmt = $this->db->prepare($query);
             $stmt->bindParam(':gender_id', $data['gender_id'], PDO::PARAM_INT);
             $stmt->execute();
-            
+
             if ($stmt->rowCount() === 0) {
                 $errors[] = "Gender ID {$data['gender_id']} does not exist";
             }
         }
-        
+
         // Check disability_category_id exists
         if (isset($data['disability_category_id'])) {
             $query = "SELECT category_id FROM disability_categories WHERE category_id = :category_id";
             $stmt = $this->db->prepare($query);
             $stmt->bindParam(':category_id', $data['disability_category_id'], PDO::PARAM_INT);
             $stmt->execute();
-            
+
             if ($stmt->rowCount() === 0) {
                 $errors[] = "Disability category ID {$data['disability_category_id']} does not exist";
             }
         }
-        
+
         // Check disability_type_id exists
         if (isset($data['disability_type_id'])) {
             $query = "SELECT type_id FROM disability_types WHERE type_id = :type_id";
             $stmt = $this->db->prepare($query);
             $stmt->bindParam(':type_id', $data['disability_type_id'], PDO::PARAM_INT);
             $stmt->execute();
-            
+
             if ($stmt->rowCount() === 0) {
                 $errors[] = "Disability type ID {$data['disability_type_id']} does not exist";
             }
-            
+
             // Check that disability_type belongs to the specified category if both are provided
             if (isset($data['disability_category_id'])) {
                 $query = "SELECT type_id FROM disability_types 
@@ -740,37 +778,96 @@ class PwdRecords
                 $stmt->bindParam(':type_id', $data['disability_type_id'], PDO::PARAM_INT);
                 $stmt->bindParam(':category_id', $data['disability_category_id'], PDO::PARAM_INT);
                 $stmt->execute();
-                
+
                 if ($stmt->rowCount() === 0) {
                     $errors[] = "Disability type ID {$data['disability_type_id']} does not belong to category ID {$data['disability_category_id']}";
                 }
             }
         }
-        
+
         // Check community_id exists
         if (isset($data['community_id'])) {
             $query = "SELECT community_id FROM communities WHERE community_id = :community_id";
             $stmt = $this->db->prepare($query);
             $stmt->bindParam(':community_id', $data['community_id'], PDO::PARAM_INT);
             $stmt->execute();
-            
+
             if ($stmt->rowCount() === 0) {
                 $errors[] = "Community ID {$data['community_id']} does not exist";
             }
         }
-        
+
         // Check assistance_type_needed_id exists if provided
         if (isset($data['assistance_type_needed_id']) && !empty($data['assistance_type_needed_id'])) {
             $query = "SELECT assistance_type_id FROM assistance_types WHERE assistance_type_id = :assistance_type_id";
             $stmt = $this->db->prepare($query);
             $stmt->bindParam(':assistance_type_id', $data['assistance_type_needed_id'], PDO::PARAM_INT);
             $stmt->execute();
-            
+
             if ($stmt->rowCount() === 0) {
                 $errors[] = "Assistance type ID {$data['assistance_type_needed_id']} does not exist";
             }
         }
-        
+
         return $errors;
+    }
+
+    /**
+     * Get current quarter additions (total PWDs added in current quarter)
+     * 
+     * @param string $quarter Current quarter (Q1, Q2, Q3, Q4)
+     * @param int $year Current year
+     * @return int Number of PWDs added in the current quarter
+     */
+    public function getCurrentQuarterAdditions(string $quarter, int $year): int
+    {
+        try {
+            $query = "SELECT COUNT(*) as count 
+                FROM {$this->tableName} 
+                WHERE quarter = :quarter AND year = :year";
+
+            $stmt = $this->db->prepare($query);
+
+            $stmt->bindParam(':quarter', $quarter);
+            $stmt->bindParam(':year', $year, PDO::PARAM_INT);
+
+            if (!$stmt->execute()) {
+                $this->lastError = "Error executing query: " . implode(" ", $stmt->errorInfo());
+                return 0;
+            }
+
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return (int)($result['count'] ?? 0);
+        } catch (PDOException $e) {
+            $this->lastError = "Error fetching current quarter additions: " . $e->getMessage();
+            return 0;
+        }
+    }
+
+    /**
+     * Get total assessed beneficiaries
+     * 
+     * @return int Number of assessed beneficiaries
+     */
+    public function getTotalAssessedBeneficiaries(): int
+    {
+        try {
+            $query = "SELECT COUNT(*) as count 
+                FROM assistance_requests 
+                WHERE status = 'assessed'";
+
+            $stmt = $this->db->prepare($query);
+
+            if (!$stmt->execute()) {
+                $this->lastError = "Error executing query: " . implode(" ", $stmt->errorInfo());
+                return 0;
+            }
+
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return (int)($result['count'] ?? 0);
+        } catch (PDOException $e) {
+            $this->lastError = "Error fetching total assessed beneficiaries: " . $e->getMessage();
+            return 0;
+        }
     }
 }

@@ -1342,6 +1342,45 @@ Retrieves PWD records for a specific community.
 **Response:**
 Same as "List All PWD Records" but filtered by community.
 
+### Get Total PWD Count
+
+Retrieves the total number of PWD records, quarterly additions, and assessed beneficiaries.
+
+**URL:** `/v1/pwd-records/total`
+
+**Method:** `GET`
+
+**Authentication Required:** Yes
+
+**Response:**
+
+```json
+{
+  "status": "success",
+  "total_pwd": 145,
+  "current_quarter_additions": 23,
+  "total_assessed_beneficiaries": 87,
+  "current_period": {
+    "quarter": "Q3",
+    "year": 2025
+  },
+  "message": "PWD statistics"
+}
+```
+
+### Get Statistics Dashboard Data
+
+Retrieves comprehensive statistics for dashboard display, including total PWD count, quarterly additions, and assessed beneficiaries.
+
+**URL:** `/v1/pwd-records/statistics`
+
+**Method:** `GET`
+
+**Authentication Required:** Yes
+
+**Response:**
+Same as "Get Total PWD Count" endpoint.
+
 ---
 
 ## Assistance Requests API
