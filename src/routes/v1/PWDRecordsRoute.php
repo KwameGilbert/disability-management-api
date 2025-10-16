@@ -61,7 +61,14 @@ return function ($app): void {
     // Create a new PWD record
     // Complex request with many fields, see schema.sql for complete field list
     $app->post('/v1/pwd-records', function ($request, $response) use ($pwdRecordsController) {
-        $data = json_decode((string) $request->getBody(), true) ?? [];
+        // Support both JSON and multipart/form-data (FormData)
+        $contentType = $request->getHeaderLine('Content-Type');
+        if (strpos($contentType, 'multipart/form-data') !== false) {
+            $data = $_POST;
+            // Files are in $_FILES, handled in the controller
+        } else {
+            $data = json_decode((string) $request->getBody(), true) ?? [];
+        }
         $result = $pwdRecordsController->createPwdRecord($data);
         $response->getBody()->write($result);
         return $response->withHeader('Content-Type', 'application/json');
