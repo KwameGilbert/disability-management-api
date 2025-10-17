@@ -92,18 +92,16 @@ return function ($app): void {
         // Check if user is admin - this should be handled by middleware
         require_once CONTROLLER . '/UsersController.php';
         $usersController = new UsersController();
-    $user = $usersController->getUserById($userId);
-        if (is_string($user)) {
-            $user = json_decode($user, true);
-        }
-        if (!is_array($user) || !isset($user['role'])) {
+        $userJson = $usersController->getUserById($userId);
+        $user = json_decode($userJson, true);
+        if (!is_array($user) || $user['status'] !== 'success' || !is_array($user['user']) || !isset($user['user']['role'])) {
             $response->getBody()->write(json_encode([
                 'status' => 'error',
                 'message' => 'User not found or invalid user data',
             ]));
             return $response->withHeader('Content-Type', 'application/json')->withStatus(404);
         }
-        $userRole = $user['role'];
+        $userRole = $user['user']['role'];
         if ($userRole !== 'admin') {
             $response->getBody()->write(json_encode([
                 'status' => 'error',
