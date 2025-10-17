@@ -10,6 +10,41 @@ require_once MODEL . 'Communities.php';
  * Handles community CRUD operations
  */
 class CommunitiesController
+    /**
+     * Get community beneficiary report
+     * Endpoint: /v1/communities/report
+     * @return string JSON response with beneficiary count per community
+     */
+    public function getCommunityBeneficiaryReport(): string
+    {
+        // Get all communities
+        $communities = $this->communityModel->getAll();
+        // Connect to database
+        $db = $this->communityModel->db;
+        $results = [];
+        foreach ($communities as $community) {
+            $communityId = $community['community_id'];
+            // Count beneficiaries in pwd_records for this community
+            $stmt = $db->prepare("SELECT COUNT(*) as beneficiary_count FROM pwd_records WHERE community_id = :community_id");
+            $stmt->bindParam(':community_id', $communityId, PDO::PARAM_INT);
+            $stmt->execute();
+            $count = $stmt->fetch(PDO::FETCH_ASSOC)['beneficiary_count'] ?? 0;
+            $results[] = [
+                'community_id' => $communityId,
+                'community_name' => $community['community_name'],
+                'beneficiary_count' => (int)$count
+            ];
+        }
+        // Sort descending by beneficiary_count
+        usort($results, function($a, $b) {
+            return $b['beneficiary_count'] <=> $a['beneficiary_count'];
+        });
+        return json_encode([
+            'status' => 'success',
+            'data' => $results,
+            'message' => empty($results) ? 'No community beneficiary data found' : 'Community beneficiary data retrieved successfully'
+        ], JSON_PRETTY_PRINT);
+    }
 {
     protected Communities $communityModel;
 

@@ -12,6 +12,76 @@ require_once MODEL . 'ActivityLogs.php';
  * Provides endpoints for retrieving statistical data about PWDs
  */
 class QuarterlyStatisticsController
+
+    /**
+     * Get annual registration report for the current year
+     * Endpoint: /v1/statistics/current-year
+     * @return string JSON response with annual registration metrics
+     */
+    public function getAnnualRegistrationReport(): string
+    {
+        $currentYear = date('Y');
+        // Total new PWDs registered in the current year
+        $db = (new \PwdRecords())->db;
+        $stmt = $db->prepare("SELECT COUNT(*) as count FROM pwd_records WHERE year = :year");
+        $stmt->bindValue(':year', $currentYear, PDO::PARAM_INT);
+        $stmt->execute();
+        $totalRegistrations = (int)($stmt->fetch(PDO::FETCH_ASSOC)['count'] ?? 0);
+
+        // Total unique PWDs who have received assistance in the current year
+        $stmt = $db->prepare("SELECT COUNT(DISTINCT beneficiary_id) as count FROM assistance_requests WHERE YEAR(created_at) = :year AND status IN ('approved','assessed')");
+        $stmt->bindValue(':year', $currentYear, PDO::PARAM_INT);
+        $stmt->execute();
+        $totalAssisted = (int)($stmt->fetch(PDO::FETCH_ASSOC)['count'] ?? 0);
+
+        // Total pending assistance requests in the current year
+        $stmt = $db->prepare("SELECT COUNT(*) as count FROM assistance_requests WHERE YEAR(created_at) = :year AND status = 'pending'");
+        $stmt->bindValue(':year', $currentYear, PDO::PARAM_INT);
+        $stmt->execute();
+        $pendingRequests = (int)($stmt->fetch(PDO::FETCH_ASSOC)['count'] ?? 0);
+
+        $metrics = [
+            [
+                'metric' => 'Total Registrations (Current Year)',
+                'value' => $totalRegistrations
+            ],
+            [
+                'metric' => 'Total Assisted (Current Year)',
+                'value' => $totalAssisted
+            ],
+            [
+                'metric' => 'Pending Assistance Requests',
+                'value' => $pendingRequests
+            ]
+        ];
+
+        return json_encode([
+            'status' => 'success',
+            'data' => $metrics,
+            'message' => 'Annual registration report generated successfully'
+        ], JSON_PRETTY_PRINT);
+    }
+    /**
+     * Get quarterly registration report for the current year
+     * Endpoint: /v1/quarterly-statistics/report
+     * @return string JSON response with quarterly registration data for the current year
+     */
+    public function getQuarterlyRegistrationReport(): string
+    {
+        $currentYear = date('Y');
+        // Get all quarters for the current year
+        $statistics = $this->statsModel->getCurrentYearStatistics();
+        // Optionally, sort by quarter (Q1, Q2, Q3, Q4)
+        $quarterOrder = ['Q1' => 1, 'Q2' => 2, 'Q3' => 3, 'Q4' => 4];
+        usort($statistics, function($a, $b) use ($quarterOrder) {
+            return ($quarterOrder[$a['quarter']] ?? 0) <=> ($quarterOrder[$b['quarter']] ?? 0);
+        });
+        return json_encode([
+            'status' => !empty($statistics) ? 'success' : 'error',
+            'data' => $statistics,
+            'message' => empty($statistics) ? "No quarterly registration data found for $currentYear" : "Quarterly registration data for $currentYear retrieved successfully"
+        ], JSON_PRETTY_PRINT);
+    }
 {
     protected QuarterlyStatistics $statsModel;
     protected ActivityLogs $logsModel;

@@ -10,6 +10,33 @@ require_once MODEL . 'AssistanceTypes.php';
  * Handles assistance type CRUD operations
  */
 class AssistanceTypesController
+    /**
+     * Get assistance distribution report
+     * Endpoint: /v1/assistance-types/report
+     * @return string JSON response with assistance type distribution data
+     */
+    public function getAssistanceDistributionReport(): string
+    {
+        // Get all assistance types
+        $assistanceTypes = $this->assistanceTypeModel->getAll();
+        $distribution = [];
+        foreach ($assistanceTypes as $type) {
+            $distribution[] = [
+                'assistance_type_id' => $type['assistance_type_id'],
+                'assistance_type_name' => $type['assistance_type_name'],
+                'total_usage' => $this->assistanceTypeModel->getTotalUsageCount($type['assistance_type_id'])
+            ];
+        }
+        // Sort descending by total_usage
+        usort($distribution, function($a, $b) {
+            return $b['total_usage'] <=> $a['total_usage'];
+        });
+        return json_encode([
+            'status' => 'success',
+            'data' => $distribution,
+            'message' => empty($distribution) ? 'No assistance type distribution data found' : 'Assistance type distribution data retrieved successfully'
+        ], JSON_PRETTY_PRINT);
+    }
 {
     protected AssistanceTypes $assistanceTypeModel;
 

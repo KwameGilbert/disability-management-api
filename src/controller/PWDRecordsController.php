@@ -11,6 +11,61 @@ require_once MODEL . 'ActivityLogs.php';
  * Handles PWD records CRUD operations and related processes
  */
 class PwdRecordsController
+
+    /**
+     * Get demographics summary report (age group, gender, disability type)
+     * Endpoint: /v1/pwd-records/demographics
+     * @return string JSON response with demographics summary
+     */
+    public function getDemographicsSummaryReport(): string
+    {
+        // Age Group Analysis
+        $ageGroups = [
+            ['label' => '0-17', 'min' => 0, 'max' => 17],
+            ['label' => '18-35', 'min' => 18, 'max' => 35],
+            ['label' => '36-59', 'min' => 36, 'max' => 59],
+            ['label' => '60+', 'min' => 60, 'max' => 200],
+        ];
+        $ageGroupResults = [];
+        $db = $this->pwdModel->db;
+        foreach ($ageGroups as $group) {
+            $stmt = $db->prepare("SELECT COUNT(*) as count FROM pwd_records WHERE age >= :min AND age <= :max");
+            $stmt->bindValue(':min', $group['min'], PDO::PARAM_INT);
+            $stmt->bindValue(':max', $group['max'], PDO::PARAM_INT);
+            $stmt->execute();
+            $count = $stmt->fetch(PDO::FETCH_ASSOC)['count'] ?? 0;
+            $ageGroupResults[] = [
+                'age_group' => $group['label'],
+                'count' => (int)$count
+            ];
+        }
+
+        // Gender Analysis
+        $stmt = $db->prepare("SELECT g.gender_name as gender, COUNT(*) as count FROM pwd_records p LEFT JOIN genders g ON p.gender_id = g.gender_id GROUP BY g.gender_name");
+        $stmt->execute();
+        $genderResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($genderResults as &$row) {
+            $row['count'] = (int)$row['count'];
+        }
+
+        // Disability Type Analysis
+        $stmt = $db->prepare("SELECT dt.type_name as disability_type, COUNT(*) as count FROM pwd_records p LEFT JOIN disability_types dt ON p.disability_type_id = dt.type_id GROUP BY dt.type_name");
+        $stmt->execute();
+        $disabilityTypeResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($disabilityTypeResults as &$row) {
+            $row['count'] = (int)$row['count'];
+        }
+
+        return json_encode([
+            'status' => 'success',
+            'data' => [
+                'age_groups' => $ageGroupResults,
+                'genders' => $genderResults,
+                'disability_types' => $disabilityTypeResults
+            ],
+            'message' => 'Demographics summary report generated successfully'
+        ], JSON_PRETTY_PRINT);
+    }
 {
     protected PwdRecords $pwdModel;
     protected ActivityLogs $logModel;

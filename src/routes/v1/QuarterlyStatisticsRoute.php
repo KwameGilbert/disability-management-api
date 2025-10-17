@@ -1,3 +1,9 @@
+    // Quarterly Registration Report for current year (for PDF)
+    $app->get('/v1/quarterly-statistics/report', function ($request, $response) use ($statisticsController) {
+        $result = $statisticsController->getQuarterlyRegistrationReport();
+        $response->getBody()->write($result);
+        return $response->withHeader('Content-Type', 'application/json');
+    });
 <?php
 
 declare(strict_types=1);
