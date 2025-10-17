@@ -1,12 +1,14 @@
+declare(strict_types=1);
+
+<?php
+declare(strict_types=1);
+
     // Community-based Beneficiary Report (for PDF)
     $app->get('/v1/communities/report', function ($request, $response) use ($communitiesController) {
         $result = $communitiesController->getCommunityBeneficiaryReport();
         $response->getBody()->write($result);
         return $response->withHeader('Content-Type', 'application/json');
     });
-<?php
-
-declare(strict_types=1);
 
 /**
  * Communities API Routes

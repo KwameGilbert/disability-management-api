@@ -11,7 +11,7 @@ require_once MODEL . 'ActivityLogs.php';
  * Handles PWD records CRUD operations and related processes
  */
 class PwdRecordsController
-
+{
     /**
      * Get demographics summary report (age group, gender, disability type)
      * Endpoint: /v1/pwd-records/demographics

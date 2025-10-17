@@ -1,12 +1,14 @@
+declare(strict_types=1);
+
+<?php
+declare(strict_types=1);
+
     // Assistance Distribution Report (for PDF)
     $app->get('/v1/assistance-types/report', function ($request, $response) use ($assistanceTypesController) {
         $result = $assistanceTypesController->getAssistanceDistributionReport();
         $response->getBody()->write($result);
         return $response->withHeader('Content-Type', 'application/json');
     });
-<?php
-
-declare(strict_types=1);
 
 /**
  * Assistance Types API Routes
