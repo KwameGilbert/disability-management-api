@@ -92,7 +92,17 @@ return function ($app): void {
         // Check if user is admin - this should be handled by middleware
         require_once CONTROLLER . '/UsersController.php';
         $usersController = new UsersController();
-    $user = $usersController->getUserById($id);
+        $user = $usersController->getUserById($id);
+        if (is_string($user)) {
+            $user = json_decode($user, true);
+        }
+        if (!is_array($user) || !isset($user['role'])) {
+            $response->getBody()->write(json_encode([
+                'status' => 'error',
+                'message' => 'User not found or invalid user data',
+            ]));
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(404);
+        }
         $userRole = $user['role'];
         if ($userRole !== 'admin') {
             $response->getBody()->write(json_encode([
@@ -129,7 +139,17 @@ return function ($app): void {
         // Check if user is admin - this should be handled by middleware
         require_once CONTROLLER . '/UsersController.php';
         $usersController = new UsersController();
-    $user = $usersController->getUserById($id);
+        $user = $usersController->getUserById($id);
+        if (is_string($user)) {
+            $user = json_decode($user, true);
+        }
+        if (!is_array($user) || !isset($user['role'])) {
+            $response->getBody()->write(json_encode([
+                'status' => 'error',
+                'message' => 'User not found or invalid user data',
+            ]));
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(404);
+        }
         $userRole = $user['role'];
         if ($userRole !== 'admin') {
             $response->getBody()->write(json_encode([
