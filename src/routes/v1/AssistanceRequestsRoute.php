@@ -92,7 +92,7 @@ return function ($app): void {
         // Check if user is admin - this should be handled by middleware
         require_once CONTROLLER . '/UsersController.php';
         $usersController = new UsersController();
-        $user = $usersController->getUserById($id);
+    $user = $usersController->getUserById($userId);
         if (is_string($user)) {
             $user = json_decode($user, true);
         }
