@@ -26,7 +26,7 @@ require_once CONFIG . 'Database.php';
 class PwdRecords
 {
     /** @var PDO */
-    protected PDO $db;
+    public PDO $db;
 
     /** @var string */
     private string $tableName = 'pwd_records';

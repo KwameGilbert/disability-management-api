@@ -9,6 +9,7 @@ return function ($app): void {
         '/v1/users' =>  '/v1/UsersRoute.php',
         '/v1/communities' =>  '/v1/CommunitiesRoute.php',
         '/v1/statistics' =>  '/v1/QuarterlyStatisticsRoute.php',
+        '/v1/quarterly-statistics' => '/v1/QuarterlyStatisticsRoute.php',
         '/v1/pwd-records' =>  '/v1/PWDRecordsRoute.php',
         '/v1/disability-categories' =>  '/v1/DisabilityCategoriesRoute.php',
         '/v1/disability-types' =>  '/v1/DisabilityTypesRoute.php',
