@@ -69,18 +69,18 @@ class PwdRecordsController
     
     protected PwdRecords $pwdModel;
     protected ActivityLogs $logModel;
-+
-+
-+    public function __construct()
-+
-+    {
-+
-+        $this->pwdModel = new PwdRecords();
-+
-+        $this->logModel = new ActivityLogs();
-+
-+    }
-*** End Patch
+
+
+    public function __construct()
+
+    {
+
+        $this->pwdModel = new PwdRecords();
+
+        $this->logModel = new ActivityLogs();
+
+    }
+
 
     /**
      * List all PWD records with pagination and optional filtering

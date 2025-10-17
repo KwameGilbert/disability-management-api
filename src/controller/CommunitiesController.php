@@ -10,6 +10,7 @@ require_once MODEL . 'Communities.php';
  * Handles community CRUD operations
  */
 class CommunitiesController
+{
     /**
      * Get community beneficiary report
      * Endpoint: /v1/communities/report
@@ -45,7 +46,7 @@ class CommunitiesController
             'message' => empty($results) ? 'No community beneficiary data found' : 'Community beneficiary data retrieved successfully'
         ], JSON_PRETTY_PRINT);
     }
-{
+
     protected Communities $communityModel;
 
     public function __construct()

@@ -12,7 +12,7 @@ require_once MODEL . 'ActivityLogs.php';
  * Provides endpoints for retrieving statistical data about PWDs
  */
 class QuarterlyStatisticsController
-
+{
     /**
      * Get annual registration report for the current year
      * Endpoint: /v1/statistics/current-year
@@ -82,7 +82,7 @@ class QuarterlyStatisticsController
             'message' => empty($statistics) ? "No quarterly registration data found for $currentYear" : "Quarterly registration data for $currentYear retrieved successfully"
         ], JSON_PRETTY_PRINT);
     }
-{
+
     protected QuarterlyStatistics $statsModel;
     protected ActivityLogs $logsModel;
 

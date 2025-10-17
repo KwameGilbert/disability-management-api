@@ -10,6 +10,7 @@ require_once MODEL . 'AssistanceTypes.php';
  * Handles assistance type CRUD operations
  */
 class AssistanceTypesController
+{
     /**
      * Get assistance distribution report
      * Endpoint: /v1/assistance-types/report
@@ -37,7 +38,7 @@ class AssistanceTypesController
             'message' => empty($distribution) ? 'No assistance type distribution data found' : 'Assistance type distribution data retrieved successfully'
         ], JSON_PRETTY_PRINT);
     }
-{
+
     protected AssistanceTypes $assistanceTypeModel;
 
     public function __construct()
