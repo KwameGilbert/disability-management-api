@@ -92,7 +92,7 @@ return function ($app): void {
         // Check if user is admin - this should be handled by middleware
         require_once CONTROLLER . '/UsersController.php';
         $usersController = new UsersController();
-        $user = $userController->getUserById($id);
+    $user = $usersController->getUserById($id);
         $userRole = $user['role'];
         if ($userRole !== 'admin') {
             $response->getBody()->write(json_encode([
@@ -129,7 +129,7 @@ return function ($app): void {
         // Check if user is admin - this should be handled by middleware
         require_once CONTROLLER . '/UsersController.php';
         $usersController = new UsersController();
-        $user = $userController->getUserById($id);
+    $user = $usersController->getUserById($id);
         $userRole = $user['role'];
         if ($userRole !== 'admin') {
             $response->getBody()->write(json_encode([
