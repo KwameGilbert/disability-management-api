@@ -9,9 +9,11 @@ declare(strict_types=1);
  * PWD records table has complex relationships with multiple other tables
  */
 
-require_once CONTROLLER . 'PWDRecordsController.php';
+
 
 return function ($app): void {
+
+    require_once CONTROLLER . 'PWDRecordsController.php';
     // Get demographics summary report (age group, gender, disability type)
     $app->get('/v1/pwd-records/demographics', function ($request, $response) use ($pwdRecordsController) {
         $result = $pwdRecordsController->getDemographicsSummaryReport();

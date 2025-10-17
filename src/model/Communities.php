@@ -14,7 +14,7 @@ require_once CONFIG . 'Database.php';
 class Communities
 {
     /** @var PDO */
-    protected PDO $db;
+    public PDO $db;
 
     /** @var string */
     private string $tableName = 'communities';
