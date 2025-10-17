@@ -12,6 +12,12 @@ declare(strict_types=1);
 require_once CONTROLLER . 'PWDRecordsController.php';
 
 return function ($app): void {
+    // Get demographics summary report (age group, gender, disability type)
+    $app->get('/v1/pwd-records/demographics', function ($request, $response) use ($pwdRecordsController) {
+        $result = $pwdRecordsController->getDemographicsSummaryReport();
+        $response->getBody()->write($result);
+        return $response->withHeader('Content-Type', 'application/json');
+    });
     $pwdRecordsController = new PwdRecordsController();
 
     // Get all PWD records with pagination and optional filtering
