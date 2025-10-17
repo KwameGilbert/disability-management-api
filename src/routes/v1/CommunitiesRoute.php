@@ -1,24 +1,17 @@
 <?php
 declare(strict_types=1);
 
+require_once CONTROLLER . '/CommunitiesController.php';
+
+return function ($app): void {
+    $communitiesController = new CommunitiesController();
+
     // Community-based Beneficiary Report (for PDF)
     $app->get('/v1/communities/report', function ($request, $response) use ($communitiesController) {
         $result = $communitiesController->getCommunityBeneficiaryReport();
         $response->getBody()->write($result);
         return $response->withHeader('Content-Type', 'application/json');
     });
-
-/**
- * Communities API Routes
- * 
- * These routes handle community management operations (CRUD)
- * Communities table structure: community_id, community_name
- */
-
-require_once CONTROLLER . '/CommunitiesController.php';
-
-return function ($app): void {
-    $communitiesController = new CommunitiesController();
 
     // Get all communities
     $app->get('/v1/communities', function ($request, $response) use ($communitiesController) {

@@ -1,24 +1,17 @@
 <?php
 declare(strict_types=1);
 
+require_once CONTROLLER . 'QuarterlyStatisticsController.php';
+
+return function ($app): void {
+    $statisticsController = new QuarterlyStatisticsController();
+
     // Quarterly Registration Report for current year (for PDF)
     $app->get('/v1/quarterly-statistics/report', function ($request, $response) use ($statisticsController) {
         $result = $statisticsController->getQuarterlyRegistrationReport();
         $response->getBody()->write($result);
         return $response->withHeader('Content-Type', 'application/json');
     });
-
-/**
- * Quarterly Statistics API Routes
- * 
- * These routes handle statistical data from the quarterly_statistics view
- * View structure: period_id, quarter, year, total_registered_pwd, total_assessed, pending
- */
-
-require_once CONTROLLER . 'QuarterlyStatisticsController.php';
-
-return function ($app): void {
-    $statisticsController = new QuarterlyStatisticsController();
 
     // Get all statistics
     $app->get('/v1/statistics', function ($request, $response) use ($statisticsController) {

@@ -66,15 +66,21 @@ class PwdRecordsController
             'message' => 'Demographics summary report generated successfully'
         ], JSON_PRETTY_PRINT);
     }
-{
+    
     protected PwdRecords $pwdModel;
     protected ActivityLogs $logModel;
-
-    public function __construct()
-    {
-        $this->pwdModel = new PwdRecords();
-        $this->logModel = new ActivityLogs();
-    }
++
++
++    public function __construct()
++
++    {
++
++        $this->pwdModel = new PwdRecords();
++
++        $this->logModel = new ActivityLogs();
++
++    }
+*** End Patch
 
     /**
      * List all PWD records with pagination and optional filtering

@@ -1,28 +1,17 @@
 <?php
 declare(strict_types=1);
 
+require_once CONTROLLER . '/AssistanceTypesController.php';
+
+return function ($app): void {
+    $assistanceTypesController = new AssistanceTypesController();
+
     // Assistance Distribution Report (for PDF)
     $app->get('/v1/assistance-types/report', function ($request, $response) use ($assistanceTypesController) {
         $result = $assistanceTypesController->getAssistanceDistributionReport();
         $response->getBody()->write($result);
         return $response->withHeader('Content-Type', 'application/json');
     });
-
-/**
- * Assistance Types API Routes
- * 
- * These routes handle assistance type management operations (CRUD)
- * Assistance types table structure: assistance_type_id, assistance_type_name
- * 
- * This table is referenced by:
- * - pwd_records(assistance_type_needed_id)
- * - assistance_requests(assistance_type_id)
- */
-
-require_once CONTROLLER . '/AssistanceTypesController.php';
-
-return function ($app): void {
-    $assistanceTypesController = new AssistanceTypesController();
 
     // Get all assistance types
     $app->get('/v1/assistance-types', function ($request, $response) use ($assistanceTypesController) {
