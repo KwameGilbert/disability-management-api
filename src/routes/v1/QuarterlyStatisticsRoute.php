@@ -13,12 +13,6 @@ return function ($app): void {
         return $response->withHeader('Content-Type', 'application/json');
     });
 
-    $app->get('/v1/quarterly-statistics/report', function ($request, $response) use ($statisticsController) {
-    $result = $statisticsController->getQuarterlyRegistrationReport();
-    $response->getBody()->write($result);
-    return $response->withHeader('Content-Type', 'application/json');
-});
-
     // Get all statistics
     $app->get('/v1/statistics', function ($request, $response) use ($statisticsController) {
         $result = $statisticsController->getAllStatistics();
