@@ -141,14 +141,14 @@ return function ($app): void {
         if (is_string($user)) {
             $user = json_decode($user, true);
         }
-        if (!is_array($user) || !isset($user['role'])) {
+        if (!is_array($user) || !isset($user['user']['role'])) {
             $response->getBody()->write(json_encode([
                 'status' => 'error',
                 'message' => 'User not found or invalid user data',
             ]));
             return $response->withHeader('Content-Type', 'application/json')->withStatus(404);
         }
-        $userRole = $user['role'];
+        $userRole = $user['user']['role'];
         if ($userRole !== 'admin') {
             $response->getBody()->write(json_encode([
                 'status' => 'error',
