@@ -262,8 +262,12 @@ class PwdRecords
     {
         try {
             // Handle JSON fields
-            if (isset($data['supporting_documents']) && is_array($data['supporting_documents'])) {
-                $data['supporting_documents'] = json_encode($data['supporting_documents']);
+            if (isset($data['supporting_documents'])) {
+                if (is_array($data['supporting_documents'])) {
+                    $data['supporting_documents'] = json_encode($data['supporting_documents']);
+                } elseif (!is_string($data['supporting_documents'])) {
+                    $data['supporting_documents'] = json_encode([]);
+                }
             }
 
             // Calculate age from DOB if provided and age is not set
