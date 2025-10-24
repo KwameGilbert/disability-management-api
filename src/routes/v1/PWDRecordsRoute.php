@@ -85,10 +85,16 @@ return function ($app): void {
 
     // Update an existing PWD record
     $app->patch('/v1/pwd-records/{id}', function ($request, $response, $args) use ($pwdRecordsController) {
-        // Get authenticated user from JWT token or session
-        $data = json_decode((string) $request->getBody(), true) ?? [];
-
-        $userId = $data['user_id'];
+        // Support both JSON and multipart/form-data (FormData)
+        $contentType = $request->getHeaderLine('Content-Type');
+        if (strpos($contentType, 'multipart/form-data') !== false) {
+            $data = $_POST;
+            // Files are in $_FILES, handled in the controller
+            $userId = isset($data['user_id']) ? $data['user_id'] : null;
+        } else {
+            $data = json_decode((string) $request->getBody(), true) ?? [];
+            $userId = isset($data['user_id']) ? $data['user_id'] : null;
+        }
 
         if (!$userId) {
             $response->getBody()->write(json_encode([
@@ -100,7 +106,6 @@ return function ($app): void {
         }
 
         $id = isset($args['id']) ? (int) $args['id'] : 0;
-        
         $result = $pwdRecordsController->updatePwdRecord($id, $data, $userId);
         $response->getBody()->write($result);
         return $response->withHeader('Content-Type', 'application/json');
