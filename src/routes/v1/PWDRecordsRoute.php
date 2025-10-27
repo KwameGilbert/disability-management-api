@@ -88,7 +88,7 @@ return function ($app): void {
         // Support both JSON and multipart/form-data (FormData)
         $contentType = $request->getHeaderLine('Content-Type');
         if (strpos($contentType, 'multipart/form-data') !== false) {
-            $data = $request->getParsedBody();
+            $data = $_POST;
             // Files are in $_FILES, handled in the controller
             $userId = isset($data['user_id']) ? $data['user_id'] : null;
         } else {
