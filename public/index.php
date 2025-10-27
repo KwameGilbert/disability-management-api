@@ -110,6 +110,22 @@ $app->get('/hello', function ($request, $response, $args) {
 // Include routes
 (require_once ROUTE . 'api.php')($app);
 
+// Serve files from public/uploads/pwd/ for preview/download
+$app->get('/uploads/pwd/{filename}', function ($request, $response, $args) {
+    $filename = basename($args['filename']); // Prevent directory traversal
+    $filePath = __DIR__ . "/uploads/pwd/" . $filename;
+
+    if (!file_exists($filePath)) {
+        $response->getBody()->write('File not found');
+        return $response->withStatus(404);
+    }
+
+    $mimeType = mime_content_type($filePath);
+    $response = $response->withHeader('Content-Type', $mimeType);
+    $response->getBody()->write(file_get_contents($filePath));
+    return $response;
+});
+
 // Add Not Found Handler - this must be added after all other routes are defined
 $app->map(['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], '/{routes:.+}', function ($request, $response) {
     $data = [
