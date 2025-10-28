@@ -91,18 +91,18 @@ return function ($app): void {
             $data = $_POST;
             // Files are in $_FILES, handled in the controller
             $userId = isset($data['user_id']) ? $data['user_id'] : null;
-            // DEBUG: Output $_POST and $userId for troubleshooting
-            if (!$userId) {
-                $response->getBody()->write(json_encode([
-                    'debug_post' => $_POST,
-                    'debug_files' => $_FILES,
-                    'debug_userId' => $userId,
-                    'status' => 'error',
-                    'message' => 'Authentication required (debug)',
-                ]));
-                return $response->withHeader('Content-Type', 'application/json')
-                    ->withStatus(401);
-            }
+            // // DEBUG: Output $_POST and $userId for troubleshooting
+            // if (!$userId) {
+            //     $response->getBody()->write(json_encode([
+            //         'debug_post' => $_POST,
+            //         'debug_files' => $_FILES,
+            //         'debug_userId' => $userId,
+            //         'status' => 'error',
+            //         'message' => 'Authentication required (debug)',
+            //     ]));
+            //     return $response->withHeader('Content-Type', 'application/json')
+            //         ->withStatus(401);
+            // }
         } else {
             $data = json_decode((string) $request->getBody(), true) ?? [];
             $userId = isset($data['user_id']) ? $data['user_id'] : null;
