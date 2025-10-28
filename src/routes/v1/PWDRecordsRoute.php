@@ -130,7 +130,7 @@ return function ($app): void {
     $app->post('/v1/pwd-records/{id}/update', function ($request, $response, $args) use ($pwdRecordsController) {
         $id = isset($args['id']) ? (int)$args['id'] : 0;
         $data = $_POST;
-        $userId = isset($data['user_id']) ? $data['user_id'] : null;
+        $userId = isset($data['user_id']) ? (int)$data['user_id'] : null;
         // Files are in $_FILES, handled in the controller
         if (!$userId) {
             $response->getBody()->write(json_encode([
