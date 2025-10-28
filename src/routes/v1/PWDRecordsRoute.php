@@ -12,6 +12,7 @@ declare(strict_types=1);
 
      require_once CONTROLLER . 'PWDRecordsController.php';
 return function ($app): void {
+    
 
    
     $pwdRecordsController = new PWDRecordsController();
@@ -122,6 +123,28 @@ return function ($app): void {
         $response->getBody()->write($result);
         return $response->withHeader('Content-Type', 'application/json');
     });
+
+
+
+    // Update an existing PWD record with files (POST workaround for PATCH limitation)
+    $app->post('/v1/pwd-records/{id}/update', function ($request, $response, $args) use ($pwdRecordsController) {
+        $id = isset($args['id']) ? (int)$args['id'] : 0;
+        $data = $_POST;
+        $userId = isset($data['user_id']) ? $data['user_id'] : null;
+        // Files are in $_FILES, handled in the controller
+        if (!$userId) {
+            $response->getBody()->write(json_encode([
+                'status' => 'error',
+                'message' => 'Authentication required',
+            ]));
+            return $response->withHeader('Content-Type', 'application/json')
+                ->withStatus(401);
+        }
+        $result = $pwdRecordsController->updatePwdRecord($id, $data, $userId);
+        $response->getBody()->write($result);
+        return $response->withHeader('Content-Type', 'application/json');
+    });
+
 
     // Update PWD record status
     // Expects: {"status":"pending|approved|declined"}
